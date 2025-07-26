@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Política de seguridad por defecto de la aplicación.
+        Permite solo tráfico seguro (HTTPS) para todas las conexiones,
+        excepto las que se definan explícitamente a continuación.
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!--
+        Configuración específica para dominios de desarrollo.
+        Aquí permitimos el tráfico en texto plano (HTTP) SOLO a la IP de tu backend.
+    -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- IP de tu red Wi-Fi -->
+        <domain includeSubdomains="true">192.168.151.245</domain>
+        <!-- IP por defecto para la comunicación con el emulador -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>
