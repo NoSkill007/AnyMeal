@@ -1,8 +1,10 @@
-/* --------------------------------------------------------------------
- * Archivo: ContactUsScreen.kt (REDiseñado)
- * Descripción: Se mejora la UI con un diseño más limpio, organizado
- * en tarjetas y visualmente más atractivo.
- * --------------------------------------------------------------------
+/**
+ * ContactUsScreen.kt
+ *
+ * Propósito: Define la pantalla de contacto de la aplicación AnyMeal.
+ * Presenta la información de contacto de manera organizada y atractiva,
+ * incluyendo correo electrónico, teléfono, dirección física y redes sociales.
+ * Implementa una interfaz visual mejorada con tarjetas y elementos interactivos.
  */
 package com.noskill.anymeal.ui.screens
 
@@ -31,6 +33,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
+/**
+ * Composable principal que define la pantalla de contacto.
+ * Muestra múltiples opciones de contacto organizadas en tarjetas separadas
+ * por categorías, con un encabezado visual destacado y una barra de navegación superior.
+ *
+ * @param navController Controlador de navegación para gestionar la navegación entre pantallas
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactUsScreen(navController: NavController) {
@@ -38,6 +47,7 @@ fun ContactUsScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
+            // Barra superior con título y botón de navegación para volver
             TopAppBar(
                 title = { Text("Contáctanos") },
                 navigationIcon = {
@@ -52,6 +62,7 @@ fun ContactUsScreen(navController: NavController) {
             )
         }
     ) { innerPadding ->
+        // Contenido principal con scroll vertical
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -61,7 +72,7 @@ fun ContactUsScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Elemento visual principal
+            // Icono principal destacado with fondo circular
             Icon(
                 imageVector = Icons.Outlined.Email,
                 contentDescription = "Contacto",
@@ -73,6 +84,7 @@ fun ContactUsScreen(navController: NavController) {
                     .padding(20.dp)
             )
 
+            // Texto introductorio para la sección de contacto
             Text(
                 text = "Estamos aquí para ayudarte. No dudes en contactarnos a través de los siguientes medios:",
                 style = MaterialTheme.typography.bodyLarge,
@@ -80,12 +92,13 @@ fun ContactUsScreen(navController: NavController) {
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
-            // Tarjeta para contacto directo
+            // Tarjeta con información de contacto directo (correo, teléfono, dirección)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column {
+                    // Elemento para contacto por correo electrónico
                     ContactInfoItem(
                         icon = Icons.Outlined.Email,
                         title = "Correo Electrónico",
@@ -93,6 +106,7 @@ fun ContactUsScreen(navController: NavController) {
                         onClick = { /* TODO: Abrir cliente de correo */ }
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    // Elemento para contacto telefónico
                     ContactInfoItem(
                         icon = Icons.Outlined.Phone,
                         title = "Teléfono",
@@ -100,6 +114,7 @@ fun ContactUsScreen(navController: NavController) {
                         onClick = { /* TODO: Abrir marcador de teléfono */ }
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    // Elemento para dirección física
                     ContactInfoItem(
                         icon = Icons.Outlined.LocationOn,
                         title = "Dirección",
@@ -109,12 +124,13 @@ fun ContactUsScreen(navController: NavController) {
                 }
             }
 
-            // Tarjeta para redes sociales
+            // Tarjeta con información de redes sociales
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column {
+                    // Elemento para Facebook
                     ContactInfoItem(
                         icon = Icons.Outlined.Link,
                         title = "Facebook",
@@ -122,6 +138,7 @@ fun ContactUsScreen(navController: NavController) {
                         onClick = { /* TODO: Abrir enlace de Facebook */ }
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    // Elemento para Instagram
                     ContactInfoItem(
                         icon = Icons.Outlined.Link,
                         title = "Instagram",
@@ -134,6 +151,16 @@ fun ContactUsScreen(navController: NavController) {
     }
 }
 
+/**
+ * Composable que representa un elemento individual de información de contacto.
+ * Muestra un icono, título y contenido en una fila, con la capacidad de ser clickeable
+ * para realizar acciones como abrir enlaces, correo o teléfono.
+ *
+ * @param icon Icono vectorial que representa visualmente el tipo de contacto
+ * @param title Título descriptivo del medio de contacto
+ * @param content Información específica de contacto (email, teléfono, etc.)
+ * @param onClick Función lambda opcional que se ejecuta al hacer clic en el elemento
+ */
 @Composable
 fun ContactInfoItem(icon: ImageVector, title: String, content: String, onClick: (() -> Unit)? = null) {
     Row(
@@ -143,8 +170,10 @@ fun ContactInfoItem(icon: ImageVector, title: String, content: String, onClick: 
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Icono representativo del tipo de contacto
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
         Spacer(modifier = Modifier.width(16.dp))
+        // Columna con título y contenido del contacto
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,

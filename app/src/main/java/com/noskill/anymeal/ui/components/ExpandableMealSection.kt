@@ -1,3 +1,11 @@
+/**
+ * ExpandableMealSection.kt
+ *
+ * Este archivo define un componente Composable que implementa una sección expandible para
+ * mostrar las comidas planificadas para un momento específico del día (desayuno, almuerzo, cena, etc.).
+ * Permite al usuario expandir/contraer la sección, ver las recetas planificadas,
+ * añadir nuevas recetas y gestionar las existentes.
+ */
 package com.noskill.anymeal.ui.components
 
 import android.util.Log // Importar Log para depuración
@@ -27,6 +35,22 @@ import androidx.compose.ui.unit.dp
 import com.noskill.anymeal.ui.models.PlanEntry
 import com.noskill.anymeal.viewmodel.FavoritesViewModel
 
+/**
+ * Componente que muestra una sección expandible para un tipo de comida específico.
+ * Incluye un encabezado clicable, una lista de recetas que se puede mostrar u ocultar,
+ * y un botón para añadir más recetas.
+ *
+ * @param modifier Modificador opcional para personalizar el diseño
+ * @param title Título de la sección (ej: "Desayuno", "Almuerzo", "Cena")
+ * @param icon Icono vectorial que representa visualmente el tipo de comida
+ * @param entries Lista de entradas de plan que contienen las recetas para este tipo de comida
+ * @param isExpanded Estado que indica si la sección está expandida o contraída
+ * @param onHeaderClick Función callback que se ejecuta cuando se hace clic en el encabezado para expandir/contraer
+ * @param onAddClick Función callback que se ejecuta cuando se hace clic en el botón de añadir receta
+ * @param onRecipeClick Función callback que se ejecuta cuando se hace clic en una receta específica
+ * @param onDeleteEntry Función callback que se ejecuta cuando se elimina una entrada, recibe el ID del backend
+ * @param favoritesViewModel ViewModel que gestiona el estado de las recetas favoritas
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpandableMealSection(
@@ -41,22 +65,24 @@ fun ExpandableMealSection(
     onDeleteEntry: (Long) -> Unit, // Acepta el ID del backend (Long)
     favoritesViewModel: FavoritesViewModel
 ) {
+    // Obtiene los IDs de recetas favoritas del ViewModel como estado observable
     val favoriteIds by favoritesViewModel.favoriteRecipeIds.collectAsState()
 
-    // --- LOGGING PARA DEPURACIÓN EN ExpandableMealSection ---
+    // Logging para depuración - muestra información sobre la recomposición y las entradas
     Log.d("ExpandableMealSection", "Recomposing: $title, isExpanded: $isExpanded, Entries count: ${entries.size}")
     entries.forEach { entry ->
         Log.d("ExpandableMealSection", "  Entry in list for $title: ${entry.recipe.title} (ID: ${entry.backendId})")
     }
-    // --- FIN LOGGING ---
 
+    // Tarjeta principal que contiene toda la sección
     Card(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(
+                // Animación de spring para que la expansión/contracción sea más natural
                 animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMedium
+                    dampingRatio = Spring.DampingRatioLowBouncy, // Menos rebote
+                    stiffness = Spring.StiffnessMedium           // Rigidez media para velocidad moderada
                 )
             ),
         shape = MaterialTheme.shapes.large,
@@ -67,9 +93,11 @@ fun ExpandableMealSection(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
+            // Encabezado de la sección con el título e icono
             ListItem(
-                modifier = Modifier.clickable { onHeaderClick() },
+                modifier = Modifier.clickable { onHeaderClick() }, // Hace que todo el encabezado sea clicable
                 headlineContent = {
+                    // Título principal de la sección (ej: "Desayuno")
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
@@ -77,9 +105,11 @@ fun ExpandableMealSection(
                     )
                 },
                 supportingContent = {
+                    // Texto secundario que muestra la cantidad de recetas
                     Text(text = if (entries.isEmpty()) "Sin recetas" else "${entries.size} receta(s)")
                 },
                 leadingContent = {
+                    // Icono con fondo circular que representa el tipo de comida
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
@@ -93,27 +123,31 @@ fun ExpandableMealSection(
                     )
                 },
                 trailingContent = {
+                    // Icono de expansión/contracción que cambia según el estado
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = if (isExpanded) "Contraer" else "Expandir"
                     )
                 },
                 colors = ListItemDefaults.colors(
-                    containerColor = Color.Transparent
+                    containerColor = Color.Transparent // Fondo transparente para el ListItem
                 )
             )
 
+            // Contenido expandible que aparece/desaparece con animación
             AnimatedVisibility(visible = isExpanded) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                 ) {
+                    // Línea divisoria entre el encabezado y el contenido
                     HorizontalDivider(
                         modifier = Modifier.padding(bottom = 16.dp),
                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     )
 
+                    // Mensaje cuando no hay recetas
                     if (entries.isEmpty()) {
                         Box(
                             modifier = Modifier
@@ -128,17 +162,20 @@ fun ExpandableMealSection(
                             )
                         }
                     } else {
+                        // Lista de recetas cuando hay elementos
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp), // Espacio entre recetas
                             modifier = Modifier.padding(bottom = 16.dp)
                         ) {
+                            // Itera sobre cada entrada y crea un componente RecipeItem
                             entries.forEachIndexed { index, entry ->
+                                // Usa una clave única para evitar problemas de recomposición
                                 key("${entry.backendId}-$index") {
                                     RecipeItem(
                                         entry = entry,
                                         onClick = onRecipeClick,
                                         onDelete = { onDeleteEntry(entry.backendId) },
-                                        isFavorite = entry.recipe.id in favoriteIds,
+                                        isFavorite = entry.recipe.id in favoriteIds, // Verifica si es favorita
                                         onFavoriteClick = { favoritesViewModel.toggleFavorite(entry.recipe.id) }
                                     )
                                 }
@@ -146,7 +183,7 @@ fun ExpandableMealSection(
                         }
                     }
 
-
+                    // Botón para añadir nueva receta
                     Button(
                         onClick = onAddClick,
                         modifier = Modifier.fillMaxWidth()

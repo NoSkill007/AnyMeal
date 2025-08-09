@@ -1,15 +1,18 @@
-// ========================================================================
-// Archivo NUEVO: dto/RecipePreviewResponse.kt
-// Propósito: Define la estructura de la lista de recetas que viene del backend.
-// ========================================================================
+/* --------------------------------------------------------------------
+ * Archivo: RecipePreviewResponse.kt
+ * Propósito: Define la estructura de los datos resumidos de una receta que vienen del backend,
+ *            utilizada para mostrar listas de recetas en la interfaz de usuario.
+ * --------------------------------------------------------------------*/
+
 package com.noskill.anymeal.dto
 
-// Esta data class debe coincidir exactamente con RecipePreviewResponse.java del backend.
+// Modelo de datos para la respuesta resumida de una receta.
+// Debe coincidir exactamente con la estructura enviada por el backend.
 data class RecipePreviewResponse(
-    val id: Long,
-    val title: String,
-    val imageUrl: String,
-    val readyInMinutes: String,
-    val difficulty: String,
-    val category: String
+    val id: Long, // ID único de la receta
+    val title: String, // Título de la receta
+    val imageUrl: String, // URL de la imagen de la receta
+    val readyInMinutes: String, // Tiempo estimado de preparación en minutos
+    val difficulty: String, // Dificultad de la receta
+    val category: String // Categoría de la receta
 )

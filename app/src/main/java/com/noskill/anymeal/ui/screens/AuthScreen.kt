@@ -1,3 +1,11 @@
+/**
+ * AuthScreen.kt
+ *
+ * Propósito: Define la pantalla inicial de autenticación de la aplicación AnyMeal.
+ * Presenta una interfaz atractiva con animaciones de entrada para dar la bienvenida
+ * a los usuarios, mostrando opciones para iniciar sesión o crear una nueva cuenta.
+ * Sirve como punto de entrada principal para usuarios no autenticados.
+ */
 package com.noskill.anymeal.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
@@ -23,18 +31,30 @@ import com.noskill.anymeal.ui.components.SecondaryButton
 import com.noskill.anymeal.ui.theme.isLight
 import kotlinx.coroutines.delay
 
+/**
+ * Composable principal que define la pantalla de autenticación.
+ * Muestra una imagen ilustrativa, un mensaje de bienvenida y botones para
+ * iniciar sesión o registrarse, todo con animaciones de entrada para mejorar
+ * la experiencia de usuario.
+ *
+ * @param onLoginClick Función de callback que se ejecuta cuando el usuario presiona el botón de inicio de sesión
+ * @param onRegisterClick Función de callback que se ejecuta cuando el usuario presiona el botón de registro
+ */
 @Composable
 fun AuthScreen(
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit
 ) {
+    // Control de estado para las animaciones de entrada
     var isVisible by remember { mutableStateOf(false) }
 
+    // Efecto lanzado al componer la pantalla que activa las animaciones con un pequeño retraso
     LaunchedEffect(key1 = Unit) {
         delay(200)
         isVisible = true
     }
 
+    // Contenedor principal de toda la pantalla
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -46,6 +66,7 @@ fun AuthScreen(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Animación de entrada para la sección superior (imagen y textos)
             AnimatedVisibility(
                 visible = isVisible,
                 enter = slideInVertically(
@@ -57,6 +78,7 @@ fun AuthScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(top = 48.dp)
                 ) {
+                    // Imagen ilustrativa de cocina
                     Image(
                         painter = painterResource(id = R.drawable.cooking_illustration),
                         contentDescription = "Ilustración de Cocina",
@@ -65,6 +87,7 @@ fun AuthScreen(
                             .aspectRatio(1f)
                     )
                     Spacer(modifier = Modifier.height(32.dp))
+                    // Título principal de bienvenida
                     Text(
                         text = "Bienvenido a AnyMeal",
                         style = MaterialTheme.typography.headlineMedium.copy(
@@ -73,6 +96,7 @@ fun AuthScreen(
                         )
                     )
                     Spacer(modifier = Modifier.height(12.dp))
+                    // Subtítulo descriptivo de la aplicación
                     Text(
                         text = "Encuentra y guarda tus recetas favoritas en un solo lugar.",
                         style = MaterialTheme.typography.bodyLarge.copy(
@@ -85,8 +109,10 @@ fun AuthScreen(
                 }
             }
 
+            // Espacio flexible que empuja los botones hacia la parte inferior
             Spacer(modifier = Modifier.weight(1f))
 
+            // Animación de entrada para la sección inferior (botones)
             AnimatedVisibility(
                 visible = isVisible,
                 enter = slideInVertically(
@@ -99,10 +125,12 @@ fun AuthScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(bottom = 16.dp)
                 ) {
+                    // Botón principal para iniciar sesión
                     PrimaryButton(
                         text = "Iniciar Sesión",
                         onClick = onLoginClick
                     )
+                    // Botón secundario para crear una nueva cuenta
                     SecondaryButton(
                         text = "Crear Cuenta",
                         onClick = onRegisterClick

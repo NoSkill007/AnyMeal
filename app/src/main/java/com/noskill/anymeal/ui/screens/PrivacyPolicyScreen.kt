@@ -1,8 +1,10 @@
-/* --------------------------------------------------------------------
- * Archivo: PrivacyPolicyScreen.kt (REDiseñado)
- * Descripción: Se mejora la UI con un diseño más limpio, organizado
- * en una tarjeta y visualmente más atractivo.
- * --------------------------------------------------------------------
+/**
+ * PrivacyPolicyScreen.kt
+ *
+ * Propósito: Define la pantalla de política de privacidad de la aplicación AnyMeal.
+ * Presenta la información legal sobre la recopilación y uso de datos de usuario
+ * de manera estructurada y legible, organizada en secciones temáticas. Implementa
+ * una interfaz visualmente atractiva con scroll para facilitar la lectura del texto legal.
  */
 package com.noskill.anymeal.ui.screens
 
@@ -25,6 +27,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
+/**
+ * Composable principal que define la pantalla de política de privacidad.
+ * Muestra un documento legal estructurado con secciones separadas para cada
+ * aspecto de la política, encapsulado en una tarjeta con diseño visual mejorado.
+ * Incluye una barra de navegación superior y permite desplazamiento vertical.
+ *
+ * @param navController Controlador de navegación para gestionar la navegación entre pantallas
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacyPolicyScreen(navController: NavController) {
@@ -32,6 +42,7 @@ fun PrivacyPolicyScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
+            // Barra superior con título y botón de navegación para volver
             TopAppBar(
                 title = { Text("Política de Privacidad") },
                 navigationIcon = {
@@ -46,6 +57,7 @@ fun PrivacyPolicyScreen(navController: NavController) {
             )
         }
     ) { innerPadding ->
+        // Contenido principal con scroll vertical
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -55,6 +67,7 @@ fun PrivacyPolicyScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Icono principal destacado with fondo circular
             Icon(
                 imageVector = Icons.Outlined.Policy,
                 contentDescription = "Política de Privacidad",
@@ -66,17 +79,20 @@ fun PrivacyPolicyScreen(navController: NavController) {
                     .padding(20.dp)
             )
 
+            // Fecha de última actualización de la política
             Text(
                 text = "Última actualización: 17 de julio de 2025",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            // Tarjeta principal que contiene todas las secciones de la política
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    // Secciones individuales de la política de privacidad
                     PrivacyPolicySection(
                         title = "1. Introducción",
                         content = "Bienvenido a AnyMeal. Nos comprometemos a proteger su privacidad. Esta Política de Privacidad explica cómo recopilamos, usamos, divulgamos y protegemos su información cuando utiliza nuestra aplicación móvil."
@@ -115,9 +131,17 @@ fun PrivacyPolicyScreen(navController: NavController) {
     }
 }
 
+/**
+ * Composable que representa una sección individual de la política de privacidad.
+ * Cada sección consta de un título destacado y un contenido detallado.
+ *
+ * @param title Título de la sección (ej. "1. Introducción")
+ * @param content Texto explicativo detallado de la sección
+ */
 @Composable
 fun PrivacyPolicySection(title: String, content: String) {
     Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        // Título de la sección con estilo destacado
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -125,6 +149,7 @@ fun PrivacyPolicySection(title: String, content: String) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(bottom = 8.dp)
         )
+        // Contenido detallado de la sección
         Text(
             text = content,
             style = MaterialTheme.typography.bodyMedium,

@@ -1,64 +1,80 @@
+/*
+ * Archivo: PlannerViewModel.kt
+ * Propósito: Define el ViewModel para la gestión del planificador semanal de comidas.
+ * Proporciona lógica para obtener, modificar y actualizar el plan semanal, así como para manejar el estado de la UI.
+ */
 package com.noskill.anymeal.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.noskill.anymeal.data.repository.PlanRepository
-import com.noskill.anymeal.di.NetworkModule
-import com.noskill.anymeal.dto.DailyPlanDto
-import com.noskill.anymeal.dto.PlanRequest
-import com.noskill.anymeal.ui.models.DailyPlan
-import com.noskill.anymeal.ui.models.PlanEntry
-import com.noskill.anymeal.ui.models.RecipePreviewUi
-import com.noskill.anymeal.util.Result
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.*
+import android.app.Application // Importa la clase Application para contexto global
+import androidx.lifecycle.AndroidViewModel // ViewModel con acceso a Application
+import androidx.lifecycle.viewModelScope // Alcance de corrutinas para ViewModel
+import com.noskill.anymeal.data.repository.PlanRepository // Repositorio para operaciones de plan
+import com.noskill.anymeal.data.di.NetworkModule // Proveedor de servicios de red
+import com.noskill.anymeal.dto.DailyPlanDto // DTO para el plan diario recibido de la API
+import com.noskill.anymeal.dto.PlanRequest // DTO para solicitudes de modificación de plan
+import com.noskill.anymeal.ui.models.DailyPlan // Modelo UI para el plan diario
+import com.noskill.anymeal.ui.models.PlanEntry // Modelo UI para una entrada de plan
+import com.noskill.anymeal.ui.models.RecipePreviewUi // Modelo UI para previsualización de receta
+import com.noskill.anymeal.util.Result // Wrapper para estados de resultado (Loading, Success, Error)
+import kotlinx.coroutines.flow.MutableStateFlow // Flow mutable para estado observable
+import kotlinx.coroutines.flow.StateFlow // Flow inmutable para exposición de estado
+import kotlinx.coroutines.flow.asStateFlow // Conversión a StateFlow
+import kotlinx.coroutines.launch // Lanzador de corrutinas
+import java.time.LocalDate // Fecha sin zona horaria
+import java.time.format.DateTimeFormatter // Formateador de fechas
+import java.util.* // Utilidades de fecha
 
+/**
+ * ViewModel principal para la gestión del planificador semanal.
+ * Maneja la obtención, actualización y modificación del plan semanal de comidas.
+ */
 class PlannerViewModel(application: Application) : AndroidViewModel(application) {
 
+    // Repositorio para operaciones de plan, inicializado con el servicio de red
     private val planRepository = PlanRepository(NetworkModule.provideApiService(application))
 
+    // Estado observable del plan semanal (Loading, Success con datos, Error)
     private val _planState = MutableStateFlow<Result<Map<String, DailyPlan>>>(Result.Loading)
     val planState: StateFlow<Result<Map<String, DailyPlan>>> = _planState.asStateFlow()
 
-    // AÑADIDO: MutableStateFlow para currentStartDate
+    // Estado observable para la fecha de inicio actual del plan semanal
     private val _currentStartDate = MutableStateFlow(LocalDate.now())
     val currentStartDate: StateFlow<LocalDate> = _currentStartDate.asStateFlow()
 
+    // Mapa para asociar claves de día con IDs de plan diario
     private var dailyPlanIdMap = mutableMapOf<String, Long>()
 
+    /**
+     * Obtiene el plan semanal a partir de una fecha de inicio.
+     * Actualiza el estado del plan y la fecha de inicio actual.
+     * Realiza copia profunda e inmutable del mapa para la UI.
+     */
     fun fetchWeeklyPlan(startDate: LocalDate) {
         viewModelScope.launch {
-            _planState.value = Result.Loading
-            // AÑADIDO: Actualizar _currentStartDate cada vez que se llama a fetchWeeklyPlan
-            _currentStartDate.value = startDate
+            _planState.value = Result.Loading // Indica carga de datos
+            _currentStartDate.value = startDate // Actualiza fecha de inicio
             try {
                 val formattedStartDate = startDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
                 val response = planRepository.getWeeklyPlan(formattedStartDate)
 
                 if (response.isSuccessful && response.body() != null) {
-                    dailyPlanIdMap.clear()
+                    dailyPlanIdMap.clear() // Limpia el mapa de IDs
                     val uiPlanMap = response.body()!!.dailyPlans.mapValues { entry ->
-                        dailyPlanIdMap[entry.key] = entry.value.id
-                        mapDtoToUiModel(entry.value)
+                        dailyPlanIdMap[entry.key] = entry.value.id // Asocia clave de día con ID
+                        mapDtoToUiModel(entry.value) // Mapea DTO a modelo UI
                     }
 
-                    // 🔥 FIX: Forzamos una copia profunda e inmutable del mapa
+                    // Copia profunda e inmutable del mapa para evitar mutaciones accidentales
                     val copiedMap = uiPlanMap.mapValues { planEntry ->
                         val original = planEntry.value
                         original.copy(
                             meals = original.meals.mapValues { mealEntry ->
-                                mealEntry.value.toList() // fuerza nueva lista
+                                mealEntry.value.toList() // Fuerza nueva lista
                             }
                         )
                     }
 
-                    _planState.value = Result.Success(copiedMap.toMap()) // NUEVO map
+                    _planState.value = Result.Success(copiedMap.toMap()) // Actualiza estado con datos
                 } else {
                     _planState.value = Result.Error("Error al cargar el plan: ${response.code()}")
                 }
@@ -68,6 +84,10 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Añade una receta al plan en una fecha y momento específico.
+     * Refresca el plan semanal tras la operación.
+     */
     fun addRecipeToPlan(recipeId: Int, mealTime: String, date: Date, currentStartDate: LocalDate) {
         viewModelScope.launch {
             val calendar = Calendar.getInstance().apply { time = date }
@@ -82,9 +102,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val response = planRepository.addRecipeToPlan(request)
                 if (response.isSuccessful) {
-                    // Usamos el _currentStartDate del ViewModel para el refresh
-                    // Esto asegura que el plan se refresque con la semana correcta
-                    fetchWeeklyPlan(_currentStartDate.value) // Usar el valor actual del StateFlow
+                    fetchWeeklyPlan(_currentStartDate.value) // Refresca plan con fecha actual
                 } else {
                     println("Error al añadir receta al plan: ${response.code()} - ${response.errorBody()?.string()}")
                 }
@@ -94,20 +112,27 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /**
+     * Elimina una entrada del plan por su ID.
+     * Refresca el plan semanal tras la operación.
+     */
     fun deletePlanEntry(entryId: Long, currentStartDate: LocalDate) {
         viewModelScope.launch {
             try {
                 val response = planRepository.deletePlanEntry(entryId)
                 if (response.isSuccessful) {
-                    // Usamos el _currentStartDate del ViewModel para el refresh
-                    fetchWeeklyPlan(_currentStartDate.value) // Usar el valor actual del StateFlow
+                    fetchWeeklyPlan(_currentStartDate.value) // Refresca plan con fecha actual
                 }
             } catch (e: Exception) {
-                // Opcional: manejar errores
+                // Manejo opcional de errores
             }
         }
     }
 
+    /**
+     * Actualiza las notas de un día específico del plan.
+     * Refresca el plan semanal tras la operación.
+     */
     fun updateNotes(newNotes: String, dayKey: String, currentStartDate: LocalDate) {
         viewModelScope.launch {
             val planId = dailyPlanIdMap[dayKey]
@@ -115,16 +140,19 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
                 try {
                     val response = planRepository.updateNotes(planId, newNotes)
                     if (response.isSuccessful) {
-                        // Usamos el _currentStartDate del ViewModel para el refresh
-                        fetchWeeklyPlan(_currentStartDate.value) // Usar el valor actual del StateFlow
+                        fetchWeeklyPlan(_currentStartDate.value) // Refresca plan con fecha actual
                     }
                 } catch (e: Exception) {
-                    // Opcional: manejar errores
+                    // Manejo opcional de errores
                 }
             }
         }
     }
 
+    /**
+     * Mapea un DailyPlanDto recibido de la API a un modelo UI DailyPlan.
+     * Convierte las entradas y recetas a sus modelos correspondientes.
+     */
     private fun mapDtoToUiModel(dto: DailyPlanDto): DailyPlan {
         val planDateAsLocalDate = LocalDate.parse(dto.planDate)
 

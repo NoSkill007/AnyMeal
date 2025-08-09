@@ -1,3 +1,11 @@
+/**
+ * RecipeSearchScreen.kt
+ *
+ * Propósito: Define la pantalla de búsqueda y selección de recetas de la aplicación AnyMeal.
+ * Permite al usuario buscar y filtrar recetas por categoría, y seleccionarlas para añadirlas
+ * a un plan de comidas específico. Funciona tanto como pantalla independiente como dentro del
+ * flujo de planificación de comidas, adaptando su comportamiento según el contexto.
+ */
 package com.noskill.anymeal.ui.screens
 
 import android.util.Log
@@ -26,6 +34,19 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.*
 
+/**
+ * Composable principal que define la pantalla de búsqueda y selección de recetas.
+ * Permite filtrar recetas por categoría y añadirlas a un plan de comidas específico.
+ * La pantalla adapta su comportamiento según si se accede desde el planificador de comidas
+ * o como pantalla independiente.
+ *
+ * @param navController Controlador de navegación para gestionar la navegación entre pantallas
+ * @param category Categoría de recetas a mostrar, también utilizada como tipo de comida (mealTime) en el contexto del planificador
+ * @param planDateString Fecha del plan como cadena de texto (formato ISO), a la que se añadirá la receta seleccionada
+ * @param favoritesViewModel ViewModel que maneja las recetas favoritas del usuario
+ * @param recipeViewModel ViewModel que proporciona y filtra las recetas
+ * @param plannerViewModel ViewModel que gestiona los planes de comidas
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeSearchScreen(
@@ -36,11 +57,12 @@ fun RecipeSearchScreen(
     recipeViewModel: RecipeViewModel = viewModel(),
     plannerViewModel: PlannerViewModel = viewModel() // Asegúrate de que se pasa desde AppNavGraph
 ) {
+    // Estado observable de la lista de recetas
     val recipeState by recipeViewModel.recipeListState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
-    // currentStartDate es necesaria para el refresh del plan en el ViewModel.
-    // Asumo que plannerViewModel.currentStartDate es un StateFlow<LocalDate> o similar.
-    val currentStartDate by plannerViewModel.currentStartDate.collectAsState() // Asumiendo que PlannerViewModel expone esto
+
+    // currentStartDate es necesaria para el refresh del plan en el ViewModel
+    val currentStartDate by plannerViewModel.currentStartDate.collectAsState()
 
     // Parsear la fecha del plan de String a LocalDate
     val planDate: LocalDate? = remember(planDateString) {
@@ -56,6 +78,7 @@ fun RecipeSearchScreen(
 
     Scaffold(
         topBar = {
+            // Barra superior con título de la categoría y botón de retorno
             TopAppBar(
                 title = { Text(category) },
                 navigationIcon = {
@@ -66,20 +89,25 @@ fun RecipeSearchScreen(
             )
         }
     ) { innerPadding ->
-
+        // Manejo de diferentes estados de la carga de recetas
         when(val state = recipeState) {
+            // Estado de carga: muestra un indicador circular centrado
             is Result.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             }
+            // Estado de error: muestra el mensaje de error
             is Result.Error -> {
                 Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
                     Text(text = state.message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
                 }
             }
+            // Estado de éxito: muestra la lista de recetas filtradas
             is Result.Success -> {
                 val allRecipes = state.data
+
+                // Filtrar recetas por la categoría seleccionada
                 val filteredRecipes = remember(category, allRecipes) {
                     if (category.equals("todas", ignoreCase = true)) {
                         allRecipes
@@ -88,6 +116,7 @@ fun RecipeSearchScreen(
                     }
                 }
 
+                // Lista de recetas con desplazamiento vertical
                 LazyColumn(
                     modifier = Modifier
                         .padding(innerPadding)

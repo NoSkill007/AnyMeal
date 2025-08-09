@@ -1,3 +1,10 @@
+/**
+ * SearchBar.kt
+ *
+ * Este archivo define un componente Composable que implementa una barra de búsqueda personalizada
+ * con forma de píldora, diseño moderno y efectos visuales adaptados al tema de la aplicación.
+ * Proporciona un campo de texto con icono de búsqueda y animación de etiqueta.
+ */
 package com.noskill.anymeal.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,46 +22,55 @@ import androidx.compose.ui.graphics.Color
 import com.noskill.anymeal.ui.theme.isLight
 import com.noskill.anymeal.ui.theme.textSecondary
 
+/**
+ * Componente de barra de búsqueda que permite a los usuarios buscar recetas e ingredientes.
+ * Presenta un diseño moderno con forma de píldora y colores adaptados al tema de la aplicación.
+ *
+ * @param value Texto actual en el campo de búsqueda
+ * @param onValueChange Función callback que se ejecuta cuando cambia el texto, recibe el nuevo texto
+ * @param modifier Modificador opcional para personalizar el diseño
+ */
 @Composable
 fun SearchBar(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Determina si el tema actual es oscuro para ajustar la transparencia
     val isDark = !MaterialTheme.colorScheme.isLight
 
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
-        // Usamos 'label' en lugar de 'placeholder' para la animación
+        modifier = modifier.fillMaxWidth(), // Ocupa todo el ancho disponible
+        // Usa 'label' en lugar de 'placeholder' para aprovechar la animación cuando hay texto
         label = { Text("Buscar recetas, ingredientes…") },
-        // Ícono al inicio
+        // Icono de búsqueda al inicio del campo
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Search Icon"
+                contentDescription = "Search Icon" // Descripción para accesibilidad
             )
         },
-        // Forma de píldora
+        // Forma de píldora con bordes muy redondeados
         shape = RoundedCornerShape(50),
-        // Personalización de colores para un look moderno
+        // Personalización detallada de colores según el estado y el tema
         colors = OutlinedTextFieldDefaults.colors(
-            // Color del contenedor
+            // Color del contenedor con ajuste de transparencia según el tema
             unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.8f else 1f),
             focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.8f else 1f),
-            // Color del borde
-            unfocusedBorderColor = Color.Transparent, // <-- Sin borde cuando no está enfocado
+            // Manejo de bordes: invisible cuando no está enfocado, color primario cuando está enfocado
+            unfocusedBorderColor = Color.Transparent, // Sin borde visible en estado normal
             focusedBorderColor = MaterialTheme.colorScheme.primary, // Borde de color al hacer clic
-            // Color del cursor
+            // Color del cursor con el color primario del tema
             cursorColor = MaterialTheme.colorScheme.primary,
-            // Colores del ícono
+            // Colores del icono destacando el color primario
             unfocusedLeadingIconColor = MaterialTheme.colorScheme.primary,
             focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-            // Colores de la etiqueta
+            // Colores de la etiqueta: secundario cuando no está enfocado, primario cuando lo está
             unfocusedLabelColor = MaterialTheme.colorScheme.textSecondary,
             focusedLabelColor = MaterialTheme.colorScheme.primary
         ),
-        singleLine = true
+        singleLine = true // Restringe la entrada a una sola línea
     )
 }

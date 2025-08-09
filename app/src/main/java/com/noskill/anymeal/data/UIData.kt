@@ -1,8 +1,9 @@
 /* --------------------------------------------------------------------
- * Archivo: UIData.kt (NUEVO)
- * Ubicación: com/noskill/anymeal/data/UIData.kt
- * Descripción: Archivo dedicado para la configuración de la UI,
- * incluyendo la barra de navegación y las categorías.
+ * Archivo: UIData.kt
+ * Propósito: Define listas y configuraciones para la interfaz de usuario (UI),
+ *            incluyendo la barra de navegación y las categorías disponibles.
+ *            Facilita la gestión centralizada de los elementos visuales
+ *            reutilizables en la aplicación.
  * --------------------------------------------------------------------
  */
 package com.noskill.anymeal.data
@@ -20,34 +21,36 @@ import com.noskill.anymeal.navigation.Screen
 import com.noskill.anymeal.ui.models.CategoryUi
 import com.noskill.anymeal.ui.models.NavItem
 
-// Lista para la barra de navegación con iconos actualizados
+// Lista para la barra de navegación con iconos actualizados.
+// Cada elemento NavItem representa una sección principal de la app.
 val navItems = listOf(
     NavItem(
-        label = "Inicio",
-        icon = Icons.Outlined.Home,
-        route = Screen.Home.route
+        label = "Inicio", // Etiqueta para la pantalla principal
+        icon = Icons.Outlined.Home, // Icono de inicio
+        route = Screen.Home.route // Ruta de navegación
     ),
     NavItem(
-        label = "Plan",
-        icon = Icons.Outlined.ListAlt,
-        route = Screen.Plan.route
+        label = "Plan", // Etiqueta para la pantalla de planificación semanal
+        icon = Icons.Outlined.ListAlt, // Icono de lista
+        route = Screen.Plan.route // Ruta de navegación
     ),
     NavItem(
-        label = "Lista",
-        icon = Icons.Outlined.ShoppingCart,
-        route = Screen.ShoppingList.route
+        label = "Lista", // Etiqueta para la pantalla de lista de compras
+        icon = Icons.Outlined.ShoppingCart, // Icono de carrito
+        route = Screen.ShoppingList.route // Ruta de navegación
     ),
     NavItem(
-        label = "Perfil",
-        icon = Icons.Outlined.AccountCircle,
-        route = Screen.Profile.route
+        label = "Perfil", // Etiqueta para la pantalla de perfil de usuario
+        icon = Icons.Outlined.AccountCircle, // Icono de usuario
+        route = Screen.Profile.route // Ruta de navegación
     ),
 )
 
-// Lista para las categorías
+// Lista para las categorías de recetas.
+// Cada elemento CategoryUi representa un tipo de comida con su icono.
 val categories = listOf(
-    CategoryUi("Desayuno", Icons.Filled.FreeBreakfast),
-    CategoryUi("Almuerzo", Icons.Filled.LunchDining),
-    CategoryUi("Cena", Icons.Filled.DinnerDining),
-    CategoryUi("Snacks", Icons.Filled.Fastfood)
+    CategoryUi("Desayuno", Icons.Filled.FreeBreakfast), // Categoría de desayuno
+    CategoryUi("Almuerzo", Icons.Filled.LunchDining),   // Categoría de almuerzo
+    CategoryUi("Cena", Icons.Filled.DinnerDining),      // Categoría de cena
+    CategoryUi("Snacks", Icons.Filled.Fastfood)         // Categoría de snacks
 )

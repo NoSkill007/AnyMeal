@@ -1,6 +1,11 @@
-// ========================================================================
-// Archivo: ui/screens/LoginScreen.kt
-// ========================================================================
+/**
+ * LoginScreen.kt
+ *
+ * Propósito: Define la pantalla de inicio de sesión de la aplicación AnyMeal.
+ * Permite a los usuarios autenticarse mediante correo electrónico/nombre de usuario
+ * y contraseña, o a través de opciones de login social. Gestiona la validación
+ * de entradas, estados de carga y manejo de errores de autenticación.
+ */
 package com.noskill.anymeal.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
@@ -38,24 +43,36 @@ import com.noskill.anymeal.util.Result
 import com.noskill.anymeal.util.isValidEmail
 import com.noskill.anymeal.viewmodel.AuthViewModel
 
-
+/**
+ * Composable principal que define la pantalla de inicio de sesión.
+ * Presenta un formulario para ingresar credenciales, muestra errores de validación
+ * y de API, gestiona el estado de la autenticación y proporciona navegación para
+ * registro de nuevos usuarios.
+ *
+ * @param navController Controlador de navegación para gestionar la navegación entre pantallas
+ * @param onRegisterClick Callback que se invoca cuando el usuario desea registrarse
+ * @param authViewModel ViewModel que maneja la lógica de autenticación
+ */
 @Composable
 fun LoginScreen(
     navController: NavController,
     onRegisterClick: () -> Unit,
     authViewModel: AuthViewModel = viewModel()
 ) {
+    // Estados para los campos del formulario y mensajes de error
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var apiError by remember { mutableStateOf<String?>(null) }
 
+    // Estado observable de autenticación del ViewModel
     val authState by authViewModel.authState.collectAsState()
 
-    // Observa el estado de la autenticación para mostrar errores o navegar
+    // Efecto para manejar cambios en el estado de autenticación
     LaunchedEffect(authState) {
         when (val state = authState) {
+            // En caso de éxito, navega a la pantalla principal
             is Result.Success -> {
                 // Navega a Home si el token no está vacío (es decir, el login fue exitoso)
                 if (state.data.token.isNotBlank()) {
@@ -64,22 +81,24 @@ fun LoginScreen(
                     }
                 }
             }
+            // En caso de error, muestra el mensaje de la API
             is Result.Error -> {
-                // Muestra el error de la API
                 apiError = state.message
             }
+            // En otros estados (Loading o inicial), limpia el error
             else -> {
-                // Limpia el error en otros estados como Loading o el inicial
                 apiError = null
             }
         }
     }
 
+    // Contenedor principal de la pantalla
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // Columna principal con scroll vertical para adaptarse a pantallas pequeñas
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -89,11 +108,12 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Logo y Título
+            // Sección de logo y título de la aplicación
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Logo con efecto de fondo circular radial
                 Box(
                     modifier = Modifier
                         .size(90.dp)
@@ -108,7 +128,6 @@ fun LoginScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Asegúrate de tener un recurso drawable llamado 'logo' o similar
                     Image(
                         painter = painterResource(id = R.drawable.ic_launcher_foreground),
                         contentDescription = "Logo AnyMeal",
@@ -120,8 +139,9 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Formulario de Login
+            // Formulario de inicio de sesión
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Campo de entrada para email o nombre de usuario
                 AuthInputField(
                     value = email,
                     onValueChange = {
@@ -135,6 +155,7 @@ fun LoginScreen(
                     error = emailError
                 )
 
+                // Campo de entrada para contraseña con opción para mostrar/ocultar
                 AuthInputField(
                     value = password,
                     onValueChange = {
@@ -149,6 +170,7 @@ fun LoginScreen(
                     error = passwordError
                 )
 
+                // Mensaje de error de API que aparece/desaparece animadamente
                 AnimatedVisibility(visible = apiError != null) {
                     Text(
                         text = apiError ?: "",
@@ -159,12 +181,13 @@ fun LoginScreen(
                     )
                 }
 
+                // Botón de inicio de sesión con estado de carga
                 PrimaryButton(
                     text = "Ingresar",
                     isLoading = authState is Result.Loading,
                     onClick = {
                         var valid = true
-                        // NOTA: El backend usa 'username' para el login, que puede ser el email o el nombre de usuario.
+                        // Validación de campos antes de enviar
                         emailError = if (email.isBlank()) {
                             valid = false; "Este campo es obligatorio"
                         } else null
@@ -172,6 +195,7 @@ fun LoginScreen(
                             valid = false; "La contraseña es obligatoria"
                         } else null
 
+                        // Si la validación es exitosa, intenta iniciar sesión
                         if (valid) {
                             authViewModel.login(LoginRequest(username = email, password = password))
                         }
@@ -181,11 +205,12 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Divisor y Login Social
+            // Sección para opciones alternativas de inicio de sesión (social)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Divisor visual con texto
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -194,17 +219,18 @@ fun LoginScreen(
                     Text("O ingresa con", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Divider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
                 }
-                // Asegúrate de tener el componente SocialLoginRow y los íconos necesarios
+                // Fila de botones para inicio de sesión social
                 SocialLoginRow(
-                    onGoogleClick = { /* TODO */ },
-                    onFacebookClick = { /* TODO */ },
-                    onAppleClick = { /* TODO */ }
+                    onGoogleClick = { /* TODO: Implementar login con Google */ },
+                    onFacebookClick = { /* TODO: Implementar login con Facebook */ },
+                    onAppleClick = { /* TODO: Implementar login con Apple */ }
                 )
             }
 
+            // Espaciador flexible que empuja el contenido de abajo hacia la parte inferior
             Spacer(modifier = Modifier.weight(1f))
 
-            // Enlace para registrarse
+            // Enlace para navegación a la pantalla de registro
             Row(
                 modifier = Modifier.padding(vertical = 24.dp),
                 verticalAlignment = Alignment.CenterVertically

@@ -1,8 +1,10 @@
-/* --------------------------------------------------------------------
- * Archivo: AppVersionScreen.kt (REDiseñado)
- * Descripción: Se mejora la UI con un diseño más limpio, organizado
- * en tarjetas y visualmente más atractivo.
- * --------------------------------------------------------------------
+/**
+ * AppVersionScreen.kt
+ *
+ * Propósito: Define la pantalla "Sobre la App" que muestra información sobre la versión,
+ * desarrolladores y detalles curiosos de la aplicación AnyMeal. Presenta una interfaz
+ * atractiva y organizada en tarjetas con un diseño limpio y moderno, facilitando al usuario
+ * conocer los datos relevantes sobre el desarrollo y la versión actual de la aplicación.
  */
 package com.noskill.anymeal.ui.screens
 
@@ -30,6 +32,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
+/**
+ * Composable principal que define la pantalla "Sobre la App".
+ * Muestra información sobre la versión de la aplicación, los desarrolladores,
+ * inspiración del proyecto y detalles curiosos, todo organizado en una interfaz
+ * visualmente atractiva con tarjetas y secciones bien definidas.
+ *
+ * @param navController Controlador de navegación para gestionar la navegación entre pantallas
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppVersionScreen(navController: NavController) {
@@ -37,6 +47,7 @@ fun AppVersionScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
+            // Barra superior con título y botón para volver atrás
             TopAppBar(
                 title = { Text("Sobre la App") },
                 navigationIcon = {
@@ -51,6 +62,7 @@ fun AppVersionScreen(navController: NavController) {
             )
         }
     ) { innerPadding ->
+        // Contenido principal con scroll vertical
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -60,7 +72,7 @@ fun AppVersionScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Elemento visual principal
+            // Ícono principal de la pantalla (círculo con icono de información)
             Icon(
                 imageVector = Icons.Outlined.Info,
                 contentDescription = "Información",
@@ -72,7 +84,7 @@ fun AppVersionScreen(navController: NavController) {
                     .padding(20.dp)
             )
 
-            // Título y versión
+            // Sección de título y versión de la aplicación
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = "AnyMeal",
@@ -86,24 +98,27 @@ fun AppVersionScreen(navController: NavController) {
                 )
             }
 
-            // Tarjeta con detalles
+            // Tarjeta con detalles sobre desarrolladores, inspiración y errores conocidos
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    // Detalle sobre los desarrolladores
                     AppVersionDetail(
                         icon = Icons.Default.Code,
                         title = "Código por:",
                         content = "Un desarrollador que vive a base de café y sueños de código limpio. (¡Saludos a Kenet!)"
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    // Detalle sobre la inspiración del proyecto
                     AppVersionDetail(
                         icon = Icons.Default.EmojiObjects,
                         title = "Inspiración:",
                         content = "Las ganas de comer rico sin pensar demasiado y evitar el '¿qué comemos hoy?' eterno."
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
+                    // Detalle sobre errores conocidos (con toque de humor)
                     AppVersionDetail(
                         icon = Icons.Default.BugReport,
                         title = "Errores Conocidos:",
@@ -112,7 +127,7 @@ fun AppVersionScreen(navController: NavController) {
                 }
             }
 
-            // Tarjeta para el dato curioso
+            // Tarjeta con dato curioso sobre el desarrollo
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -133,6 +148,7 @@ fun AppVersionScreen(navController: NavController) {
                 }
             }
 
+            // Mensaje de agradecimiento al final
             Text(
                 text = "¡Gracias por ser parte de esta aventura!",
                 style = MaterialTheme.typography.bodyMedium,
@@ -144,6 +160,15 @@ fun AppVersionScreen(navController: NavController) {
     }
 }
 
+/**
+ * Composable que muestra un detalle individual en la pantalla de información.
+ * Cada detalle consiste en un icono, un título y un contenido descriptivo,
+ * organizados en una fila con formato consistente.
+ *
+ * @param icon Icono vectorial que representa visualmente el tipo de información
+ * @param title Título descriptivo corto para la sección de información
+ * @param content Texto descriptivo detallado con la información principal
+ */
 @Composable
 fun AppVersionDetail(icon: ImageVector, title: String, content: String) {
     Row(
@@ -153,12 +178,14 @@ fun AppVersionDetail(icon: ImageVector, title: String, content: String) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Icono representativo del tipo de detalle
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(28.dp)
         )
+        // Columna con título y contenido del detalle
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,

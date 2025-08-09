@@ -1,7 +1,11 @@
-// ========================================================================
-// Archivo MODIFICADO: viewmodel/AchievementsViewModel.kt
-// Propósito: Corregido para manejar el estado 'Result' del PlannerViewModel.
-// ========================================================================
+/**
+ * AchievementsViewModel.kt
+ *
+ * Propósito: Gestiona la lógica de los logros de usuario dentro de la aplicación, realizando un seguimiento
+ * de diversas actividades como la planificación de comidas y el marcado de recetas como favoritas.
+ * Este ViewModel combina datos de PlannerViewModel y FavoritesViewModel para determinar qué logros
+ * ha desbloqueado el usuario.
+ */
 package com.noskill.anymeal.viewmodel
 
 import androidx.compose.material.icons.Icons
@@ -16,18 +20,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
+/**
+ * ViewModel que gestiona la lógica de logros dentro de la aplicación.
+ *
+ * @param plannerViewModel ViewModel que contiene información sobre los planes de comidas del usuario.
+ * @param favoritesViewModel ViewModel que contiene las recetas favoritas del usuario.
+ */
 class AchievementsViewModel(
     plannerViewModel: PlannerViewModel,
     favoritesViewModel: FavoritesViewModel
 ) : ViewModel() {
 
+    /**
+     * StateFlow que emite la lista de logros y su estado (desbloqueado o no).
+     * Combina datos de los planes de comidas y recetas favoritas para determinar
+     * el estado de cada logro.
+     */
     val achievements: StateFlow<List<Achievement>> = combine(
         plannerViewModel.planState,
         favoritesViewModel.favoriteRecipeIds
-    ) { planResult, favoriteIds -> // El nombre de la variable se cambia a planResult para mayor claridad
+    ) { planResult, favoriteIds ->
 
-        // --- CORRECCIÓN ---
-        // Se extraen los datos del plan solo si la carga fue exitosa.
+        // Extrae datos del plan solo si la carga fue exitosa.
         // Si está cargando o hay un error, se usan valores por defecto (0).
         val (totalPlannedDays, totalRecipesAdded) = when (planResult) {
             is Result.Success -> {
@@ -38,11 +52,12 @@ class AchievementsViewModel(
                 }
                 Pair(days, recipes)
             }
-            else -> Pair(0, 0) // Valores por defecto
+            else -> Pair(0, 0) // Valores por defecto para estados de carga o error
         }
 
         val totalFavorites = favoriteIds.size
 
+        // Lista de logros disponibles en la aplicación con su estado de desbloqueo
         listOf(
             Achievement(
                 title = "Primer Plan",
@@ -84,7 +99,13 @@ class AchievementsViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }
 
-// Factory para poder pasarle parámetros al AchievementsViewModel
+/**
+ * Factory para la creación de instancias de AchievementsViewModel.
+ * Permite inyectar las dependencias necesarias (otros ViewModels) al crear el ViewModel.
+ *
+ * @param plannerViewModel ViewModel con la información de planes de comidas.
+ * @param favoritesViewModel ViewModel con la información de recetas favoritas.
+ */
 class AchievementsViewModelFactory(
     private val plannerViewModel: PlannerViewModel,
     private val favoritesViewModel: FavoritesViewModel

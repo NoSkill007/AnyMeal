@@ -1,3 +1,11 @@
+/**
+ * AuthInputField.kt
+ *
+ * Este archivo define un componente Composable personalizado para campos de entrada
+ * utilizados en pantallas de autenticación (como inicio de sesión y registro).
+ * Proporciona una interfaz uniforme con soporte para campos de texto normales y contraseñas,
+ * incluyendo la funcionalidad de mostrar/ocultar contraseñas.
+ */
 package com.noskill.anymeal.ui.components
 
 import androidx.compose.foundation.layout.Column
@@ -22,6 +30,19 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 
+/**
+ * Componente de campo de entrada personalizado para pantallas de autenticación.
+ *
+ * @param value Texto actual del campo de entrada
+ * @param onValueChange Callback invocado cuando el usuario modifica el texto
+ * @param label Etiqueta descriptiva que se muestra en el campo
+ * @param leadingIcon Icono que se muestra al inicio del campo
+ * @param modifier Modificador opcional para personalizar el diseño
+ * @param isPasswordToggleEnabled Si es true, muestra un botón para alternar visibilidad de contraseña
+ * @param keyboardOptions Opciones para configurar el teclado (tipo, capitalización, etc.)
+ * @param keyboardActions Acciones personalizadas para eventos del teclado
+ * @param error Mensaje de error a mostrar (null si no hay error)
+ */
 @Composable
 fun AuthInputField(
     value: String,
@@ -34,6 +55,7 @@ fun AuthInputField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     error: String? = null
 ) {
+    // Estado para controlar la visibilidad de la contraseña
     var isPasswordVisible by remember { mutableStateOf(false) }
 
     Column(modifier = modifier) {
@@ -42,33 +64,37 @@ fun AuthInputField(
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             label = { Text(label) },
+            // Configura el icono principal a la izquierda del campo
             leadingIcon = {
                 Icon(
                     imageVector = leadingIcon,
-                    contentDescription = null
+                    contentDescription = null // No necesita descripción para accesibilidad al ser decorativo
                 )
             },
+            // Configura el icono de toggle de visibilidad de contraseña si está habilitado
             trailingIcon = {
                 if (isPasswordToggleEnabled) {
                     IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                         Icon(
                             imageVector = if (isPasswordVisible)
-                                Icons.Default.Visibility // <-- Ahora el ícono de "ojo abierto" se muestra aquí
+                                Icons.Default.Visibility // Icono de ojo abierto cuando la contraseña es visible
                             else
-                                Icons.Default.VisibilityOff, // <-- Y el "ojo tachado" es el predeterminado
+                                Icons.Default.VisibilityOff, // Icono de ojo tachado cuando la contraseña está oculta
                             contentDescription = "Toggle password visibility"
                         )
                     }
                 }
             },
+            // Aplica transformación visual para ocultar la contraseña cuando corresponde
             visualTransformation = if (isPasswordToggleEnabled && !isPasswordVisible)
-                PasswordVisualTransformation()
+                PasswordVisualTransformation() // Oculta el texto con asteriscos o puntos
             else
-                VisualTransformation.None,
+                VisualTransformation.None, // Muestra el texto normal
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
-            singleLine = true,
-            isError = error != null,
+            singleLine = true, // Restringe el campo a una sola línea
+            isError = error != null, // Activa el estado de error cuando hay un mensaje de error
+            // Personalización de colores para diferentes estados del campo
             colors = TextFieldDefaults.colors(
                 unfocusedContainerColor = Color.Transparent,
                 focusedContainerColor = Color.Transparent,
@@ -81,6 +107,7 @@ fun AuthInputField(
                 errorContainerColor = Color.Transparent
             )
         )
+        // Muestra mensaje de error debajo del campo si existe
         if (error != null) {
             Text(
                 text = error,

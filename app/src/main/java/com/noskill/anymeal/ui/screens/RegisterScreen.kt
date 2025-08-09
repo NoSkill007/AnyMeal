@@ -1,8 +1,10 @@
-/* --------------------------------------------------------------------
- * Archivo: RegisterScreen.kt (ACTUALIZADO Y FUNCIONAL)
- * Descripción: UI rediseñada e integrada con AuthViewModel para
- * realizar el registro de usuarios contra el backend.
- * --------------------------------------------------------------------
+/**
+ * RegisterScreen.kt
+ *
+ * Propósito: Define la pantalla de registro de usuarios de la aplicación AnyMeal.
+ * Permite a nuevos usuarios crear una cuenta proporcionando nombre de usuario,
+ * correo electrónico y contraseña. Implementa validación de datos en tiempo real,
+ * manejo de errores y comunicación con el backend a través del AuthViewModel.
  */
 package com.noskill.anymeal.ui.screens
 
@@ -41,28 +43,41 @@ import com.noskill.anymeal.util.Result
 import com.noskill.anymeal.util.isValidEmail
 import com.noskill.anymeal.viewmodel.AuthViewModel
 
+/**
+ * Composable principal que define la pantalla de registro de usuarios.
+ * Presenta un formulario para crear una nueva cuenta, valida los datos ingresados,
+ * muestra errores de validación y API, y navega a Home tras un registro exitoso.
+ *
+ * @param navController Controlador de navegación para gestionar la navegación entre pantallas
+ * @param onLoginClick Callback que se invoca cuando el usuario desea ir a la pantalla de inicio de sesión
+ * @param authViewModel ViewModel que maneja la lógica de autenticación
+ */
 @Composable
 fun RegisterScreen(
     navController: NavController,
     onLoginClick: () -> Unit,
     authViewModel: AuthViewModel = viewModel()
 ) {
+    // Estados para los campos del formulario
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
+    // Estados para los mensajes de error de validación
     var usernameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
     var apiError by remember { mutableStateOf<String?>(null) }
 
+    // Estado observable de autenticación del ViewModel
     val authState by authViewModel.authState.collectAsState()
 
-    // Observa el estado de la autenticación para mostrar errores o navegar
+    // Efecto para manejar cambios en el estado de autenticación
     LaunchedEffect(authState) {
         when (val state = authState) {
+            // En caso de éxito, navega a la pantalla principal
             is Result.Success -> {
                 // Navega a Home si el token no está vacío (registro exitoso)
                 if (state.data.token.isNotBlank()) {
@@ -71,22 +86,24 @@ fun RegisterScreen(
                     }
                 }
             }
+            // En caso de error, muestra el mensaje de la API
             is Result.Error -> {
-                // Muestra el error proveniente de la API
                 apiError = state.message
             }
+            // En otros estados (Loading o inicial), limpia el error
             else -> {
-                // Limpia el error en otros estados (Loading, inicial)
                 apiError = null
             }
         }
     }
 
+    // Contenedor principal de la pantalla
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // Columna principal con scroll vertical para adaptarse a pantallas pequeñas
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -96,11 +113,12 @@ fun RegisterScreen(
         ) {
             Spacer(modifier = Modifier.height(60.dp))
 
-            // Logo y Título
+            // Sección de logo y título de la aplicación
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Logo con efecto de fondo circular radial
                 Box(
                     modifier = Modifier
                         .size(90.dp)
@@ -115,7 +133,6 @@ fun RegisterScreen(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Asegúrate de tener un recurso drawable llamado 'logo' o similar
                     Image(
                         painter = painterResource(id = R.drawable.ic_launcher_foreground),
                         contentDescription = "Logo AnyMeal",
@@ -127,8 +144,9 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Formulario de Registro
+            // Formulario de registro con campos de entrada
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Campo para nombre de usuario
                 AuthInputField(
                     value = username,
                     onValueChange = {
@@ -141,6 +159,7 @@ fun RegisterScreen(
                     error = usernameError
                 )
 
+                // Campo para correo electrónico
                 AuthInputField(
                     value = email,
                     onValueChange = {
@@ -154,6 +173,7 @@ fun RegisterScreen(
                     error = emailError
                 )
 
+                // Campo para contraseña con opción para mostrar/ocultar
                 AuthInputField(
                     value = password,
                     onValueChange = {
@@ -168,6 +188,7 @@ fun RegisterScreen(
                     error = passwordError
                 )
 
+                // Campo para confirmar contraseña con opción para mostrar/ocultar
                 AuthInputField(
                     value = confirmPassword,
                     onValueChange = {
@@ -182,7 +203,7 @@ fun RegisterScreen(
                     error = confirmPasswordError
                 )
 
-                // Muestra el error de la API si existe
+                // Mensaje de error de API que aparece/desaparece animadamente
                 AnimatedVisibility(visible = apiError != null) {
                     Text(
                         text = apiError ?: "",
@@ -193,22 +214,25 @@ fun RegisterScreen(
                     )
                 }
 
+                // Botón de registro con estado de carga
                 PrimaryButton(
                     text = "Crear Cuenta",
                     isLoading = authState is Result.Loading,
                     onClick = {
+                        // Validación de campos antes de enviar
                         val isUsernameValid = username.isNotBlank()
                         val isEmailValid = email.isNotBlank() && isValidEmail(email)
                         val isPasswordValid = password.length >= 6
                         val doPasswordsMatch = password == confirmPassword
 
+                        // Asigna mensajes de error según las validaciones
                         usernameError = if (!isUsernameValid) "El nombre es obligatorio" else null
                         emailError = if (!isEmailValid) "El correo no es válido" else null
                         passwordError = if (!isPasswordValid) "Debe tener al menos 6 caracteres" else null
                         confirmPasswordError = if (!doPasswordsMatch) "Las contraseñas no coinciden" else null
 
+                        // Si todas las validaciones pasan, envía la solicitud de registro
                         if (isUsernameValid && isEmailValid && isPasswordValid && doPasswordsMatch) {
-                            // Llama al ViewModel para registrar al usuario
                             authViewModel.register(
                                 RegisterRequest(
                                     username = username,
@@ -222,9 +246,10 @@ fun RegisterScreen(
                 )
             }
 
+            // Espaciador flexible que empuja el contenido de abajo hacia la parte inferior
             Spacer(modifier = Modifier.weight(1f))
 
-            // Enlace para iniciar sesión
+            // Enlace para navegación a la pantalla de inicio de sesión
             Row(
                 modifier = Modifier.padding(vertical = 24.dp),
                 verticalAlignment = Alignment.CenterVertically

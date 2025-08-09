@@ -1,15 +1,17 @@
 // ========================================================================
-// Archivo MODIFICADO: viewmodel/RecipeViewModel.kt
-// Propósito: Se mejora el manejo de errores para diagnosticar por qué no se
-// encuentra la receta.
+// Archivo: RecipeViewModel.kt
+// Propósito: Gestiona el estado y la lógica relacionada con las recetas.
+//            Permite obtener la lista de recetas y los detalles de una receta
+//            específica, manejando el estado de carga, éxito y error para la UI.
 // ========================================================================
+
 package com.noskill.anymeal.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.noskill.anymeal.data.repository.RecipeRepository
-import com.noskill.anymeal.di.NetworkModule
+import com.noskill.anymeal.data.di.NetworkModule
 import com.noskill.anymeal.ui.models.RecipeDetailUi
 import com.noskill.anymeal.ui.models.RecipePreviewUi
 import com.noskill.anymeal.util.Result
@@ -17,20 +19,29 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+// RecipeViewModel extiende AndroidViewModel y gestiona el estado de las recetas.
 class RecipeViewModel(application: Application) : AndroidViewModel(application) {
 
+    // Instancia del repositorio de recetas, inicializada con el ApiService proporcionado por NetworkModule.
     private val recipeRepository = RecipeRepository(NetworkModule.provideApiService(application))
 
+    // StateFlow privado para almacenar el estado de la lista de recetas (cargando, éxito, error).
     private val _recipeListState = MutableStateFlow<Result<List<RecipePreviewUi>>>(Result.Loading)
+    // StateFlow público para observar el estado de la lista de recetas desde la UI.
     val recipeListState: StateFlow<Result<List<RecipePreviewUi>>> = _recipeListState
 
+    // StateFlow privado para almacenar el estado del detalle de receta (cargando, éxito, error).
     private val _recipeDetailState = MutableStateFlow<Result<RecipeDetailUi?>>(Result.Loading)
+    // StateFlow público para observar el estado del detalle de receta desde la UI.
     val recipeDetailState: StateFlow<Result<RecipeDetailUi?>> = _recipeDetailState
 
+    // Al inicializar el ViewModel, se obtiene la lista de recetas automáticamente.
     init {
         fetchRecipes(null)
     }
 
+    // Método para obtener la lista de recetas desde el repositorio.
+    // Actualiza el estado según el resultado de la llamada a la API.
     fun fetchRecipes(query: String?) {
         viewModelScope.launch {
             _recipeListState.value = Result.Loading
@@ -57,6 +68,8 @@ class RecipeViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    // Método para obtener los detalles de una receta específica por su ID.
+    // Actualiza el estado del detalle de la receta según el resultado de la llamada a la API.
     fun fetchRecipeById(id: Int) {
         viewModelScope.launch {
             _recipeDetailState.value = Result.Loading

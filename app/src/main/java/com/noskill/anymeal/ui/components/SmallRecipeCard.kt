@@ -1,9 +1,10 @@
-/* --------------------------------------------------------------------
- * Archivo: SmallRecipeCard.kt (REDESIGN FINAL PARA SINTONÍA)
- * Propósito: Rediseño visual para un aspecto más moderno y estético,
- * sincronizando con el diseño limpio y minimalista de HomeScreen.
- * Se mantiene el tamaño fijo y la lógica de ContentScale.Crop.
- * --------------------------------------------------------------------
+/**
+ * SmallRecipeCard.kt
+ *
+ * Este archivo define un componente Composable que implementa una tarjeta de receta de tamaño pequeño,
+ * diseñada para mostrar una vista previa de recetas en listas horizontales o cuadrículas.
+ * Presenta la imagen de la receta, título, tiempo de preparación, dificultad y un botón para
+ * marcarla como favorita con un diseño moderno y estético.
  */
 package com.noskill.anymeal.ui.components
 
@@ -14,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.* // Asegurarse de importar AnimatedVisibility, si se usa
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -24,66 +25,85 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow // Importar TextOverflow
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.noskill.anymeal.ui.models.RecipePreviewUi
 import com.noskill.anymeal.viewmodel.FavoritesViewModel
 
+/**
+ * Componente que muestra una tarjeta de receta de tamaño pequeño con imagen destacada.
+ * Incluye la imagen de la receta, título, tiempo de preparación, dificultad y un botón
+ * para marcar/desmarcar como favorita. Diseñado con dimensiones fijas para mantener
+ * consistencia visual en listados.
+ *
+ * @param recipe Objeto RecipePreviewUi que contiene la información de la receta a mostrar
+ * @param onClick Función callback que se ejecuta cuando se hace clic en la tarjeta
+ * @param favoritesViewModel ViewModel que gestiona el estado de recetas favoritas
+ * @param modifier Modificador opcional para personalizar el diseño
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmallRecipeCard(
     recipe: RecipePreviewUi,
     onClick: () -> Unit,
     favoritesViewModel: FavoritesViewModel,
-    modifier: Modifier = Modifier // Se mantiene el nombre 'modifier'
+    modifier: Modifier = Modifier
 ) {
+    // Obtiene los IDs de recetas favoritas como estado observable
     val favoriteIds by favoritesViewModel.favoriteRecipeIds.collectAsState()
+    // Determina si esta receta está marcada como favorita
     val isFavorite = recipe.id in favoriteIds
 
-    Card( // <-- CAMBIO CLAVE: Volver a usar Card regular (menos sombra)
+    // Tarjeta contenedora principal con diseño limpio y elevación sutil
+    Card(
         onClick = onClick,
         modifier = Modifier
-            .width(412.dp) // Ancho fijo
-            .height(260.dp) // Alto fijo
-            .then(modifier), // Aplicar el modificador externo después del tamaño fijo
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors( // Usar colores de Card regular
-            containerColor = MaterialTheme.colorScheme.surface // <-- Color de superficie más plano
+            .width(412.dp)        // Ancho fijo para consistencia visual
+            .height(260.dp)       // Alto fijo para consistencia visual
+            .then(modifier),      // Aplica el modificador externo después del tamaño fijo
+        shape = RoundedCornerShape(16.dp),  // Bordes redondeados para estética moderna
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface  // Color de superficie plano para estilo minimalista
         ),
-        // Puedes añadir un borde sutil para definición si es necesario, o quitar la elevación
-        // border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        // Se elimina la elevación explícita si se usa Card regular, la sombra es por defecto.
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // <-- Elevación sutil
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)  // Elevación sutil para efecto visual
     ) {
-        Box(modifier = Modifier.fillMaxSize()) { // La Box llena la tarjeta
-            Column(modifier = Modifier.fillMaxSize()) { // La columna interna llena la Box
+        // Box como contenedor principal para permitir superposición de elementos
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Columna para organizar verticalmente la imagen y el texto
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Imagen de la receta cargada de forma asíncrona
                 AsyncImage(
                     model = recipe.imageUrl,
-                    contentDescription = recipe.title,
-                    contentScale = ContentScale.Crop, // La imagen se recorta para llenar el espacio asignado
+                    contentDescription = recipe.title,  // Título como descripción para accesibilidad
+                    contentScale = ContentScale.Crop,   // Recorta la imagen para llenar el espacio asignado
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp) // Altura fija para el área de la imagen
-                        .background(MaterialTheme.colorScheme.surfaceDim) // Fondo para rellenar si la imagen es muy estrecha o no carga
+                        .height(180.dp)  // Altura fija para el área de la imagen
+                        .background(MaterialTheme.colorScheme.surfaceDim)  // Fondo si la imagen no carga o es muy estrecha
                 )
-                // Contenido de texto
+
+                // Contenido textual: título y detalles de la receta
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp) // Ajuste de padding
-                        .weight(1f), // Dar peso para que ocupe el espacio restante en la columna
-                    verticalArrangement = Arrangement.Center // Centrar el contenido verticalmente
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .weight(1f),  // Ocupa el espacio restante en la columna
+                    verticalArrangement = Arrangement.Center  // Centra el contenido verticalmente
                 ) {
+                    // Título de la receta en negrita con elipsis si es muy largo
                     Text(
                         text = recipe.title,
-                        style = MaterialTheme.typography.titleLarge, // Título prominente
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(4.dp)) // Espacio entre título y detalles
+
+                    Spacer(modifier = Modifier.height(4.dp))  // Espacio entre título y detalles
+
+                    // Información secundaria: tiempo de preparación y dificultad
                     Text(
                         text = "${recipe.time} · ${recipe.difficulty}",
                         style = MaterialTheme.typography.bodyMedium,
@@ -93,20 +113,22 @@ fun SmallRecipeCard(
                     )
                 }
             }
-            // Botón de favorito superpuesto
-            IconButton( // <-- Cambio a IconButton directamente para un estilo más limpio
-                onClick = { favoritesViewModel.toggleFavorite(recipe.id) },
+
+            // Botón de favorito superpuesto en la esquina superior derecha
+            IconButton(
+                onClick = { favoritesViewModel.toggleFavorite(recipe.id) },  // Alterna estado de favorito
                 modifier = Modifier
-                    .align(Alignment.TopEnd) // Alineado a la esquina superior derecha
-                    .padding(8.dp) // Padding desde los bordes
-                    .clip(CircleShape) // Recortar en círculo
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)) // Fondo semitransparente con color de superficie
-                    .size(40.dp) // Tamaño del botón
+                    .align(Alignment.TopEnd)  // Alineado a la esquina superior derecha
+                    .padding(8.dp)            // Espaciado desde los bordes
+                    .clip(CircleShape)        // Forma circular
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))  // Fondo semitransparente
+                    .size(40.dp)              // Tamaño fijo del botón
             ) {
+                // Icono que cambia según el estado de favorito
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = "Favorito",
-                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface // Color del icono
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
         }

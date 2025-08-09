@@ -1,3 +1,10 @@
+// ========================================================================
+// Archivo: ProfileViewModel.kt
+// Propósito: Gestiona el estado y la lógica relacionada con el perfil de usuario.
+//            Permite obtener, actualizar el perfil y cambiar la contraseña,
+//            manejando los estados de carga, éxito, error y reautenticación.
+// ========================================================================
+
 package com.noskill.anymeal.viewmodel
 
 import android.app.Application
@@ -6,7 +13,7 @@ import androidx.lifecycle.viewModelScope
 import com.noskill.anymeal.data.local.SessionManager // Importar SessionManager
 import com.noskill.anymeal.data.model.User
 import com.noskill.anymeal.data.repository.UserRepository
-import com.noskill.anymeal.di.NetworkModule
+import com.noskill.anymeal.data.di.NetworkModule
 import com.noskill.anymeal.dto.ChangePasswordRequest
 import com.noskill.anymeal.dto.UpdateProfileRequest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,36 +35,37 @@ data class ProfileUiState(
     val requiresReauthentication: Boolean = false // <-- NUEVO: Bandera para reautenticación
 )
 
+// ProfileViewModel extiende AndroidViewModel y gestiona el estado del perfil de usuario.
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
-
+    // Instancia del servicio de red y repositorio de usuario.
     private val apiService = NetworkModule.provideApiService(application)
     private val userRepository = UserRepository(apiService)
-    private val sessionManager = SessionManager(application) // <-- NUEVO: Instancia de SessionManager
+    private val sessionManager = SessionManager(application) // Instancia de SessionManager para manejar el token
 
+    // StateFlow privado para almacenar el estado de la UI del perfil.
     private val _uiState = MutableStateFlow(ProfileUiState())
+    // StateFlow público para observar el estado de la UI desde la interfaz.
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
+    // Al inicializar el ViewModel, se obtiene el perfil del usuario automáticamente.
     init {
-        loadUserProfile()
+        fetchUserProfile()
     }
 
-    fun loadUserProfile() {
+    // Método para obtener el perfil del usuario desde el repositorio.
+    // Actualiza el estado según el resultado de la llamada a la API.
+    fun fetchUserProfile() {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 val response = userRepository.getUserProfile()
                 if (response.isSuccessful && response.body() != null) {
-                    val userResponse = response.body()!!
-                    val user = User(userResponse.id, userResponse.username, userResponse.email)
-                    _uiState.update { it.copy(isLoading = false, user = user) }
+                    _uiState.update { it.copy(isLoading = false, user = response.body()) }
+                } else if (response.code() == 401) {
+                    // Si el token expiró, se requiere reautenticación
+                    _uiState.update { it.copy(isLoading = false, requiresReauthentication = true, errorMessage = "Sesión expirada. Inicia sesión nuevamente.") }
                 } else {
-                    // Si la carga del perfil falla (ej. token inválido), podría requerir reautenticación
-                    if (response.code() == 401 || response.code() == 403) { // Códigos comunes para no autorizado/prohibido
-                        _uiState.update { it.copy(isLoading = false, errorMessage = "Sesión expirada. Por favor, inicia sesión de nuevo.", requiresReauthentication = true) }
-                        sessionManager.clearAuthToken() // Limpiar token inválido
-                    } else {
-                        _uiState.update { it.copy(isLoading = false, errorMessage = "Error al cargar el perfil: ${response.code()}") }
-                    }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "No se pudo obtener el perfil del usuario.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = "Error de conexión: ${e.message}") }
@@ -65,28 +73,21 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun updateProfileData(newName: String, newEmail: String) {
+    // Método para actualizar el perfil del usuario.
+    // Actualiza el estado de guardado y maneja errores y éxito.
+    fun updateProfile(username: String, email: String) {
+        _uiState.update { it.copy(profileSaveState = SaveState.LOADING, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(profileSaveState = SaveState.LOADING, errorMessage = null) }
             try {
-                val request = UpdateProfileRequest(newName, newEmail)
+                val request = UpdateProfileRequest(username, email)
                 val response = userRepository.updateProfile(request)
                 if (response.isSuccessful) {
                     _uiState.update { it.copy(profileSaveState = SaveState.SUCCESS) }
-                    // Si el email cambia y el backend invalida la sesión, forzar reautenticación
-                    if (_uiState.value.user?.email != newEmail) { // Si el email realmente cambió
-                        _uiState.update { it.copy(requiresReauthentication = true, errorMessage = "Email actualizado. Por favor, inicia sesión de nuevo.") }
-                        sessionManager.clearAuthToken() // Limpiar el token antiguo
-                    }
+                    fetchUserProfile() // Actualiza el perfil en la UI
+                } else if (response.code() == 401) {
+                    _uiState.update { it.copy(profileSaveState = SaveState.ERROR, requiresReauthentication = true, errorMessage = "Sesión expirada. Inicia sesión nuevamente.") }
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Error desconocido"
-                    // Si el error es por token inválido, forzar reautenticación
-                    if (response.code() == 401 || response.code() == 403) {
-                        _uiState.update { it.copy(profileSaveState = SaveState.ERROR, errorMessage = "Sesión expirada. Por favor, inicia sesión de nuevo.", requiresReauthentication = true) }
-                        sessionManager.clearAuthToken()
-                    } else {
-                        _uiState.update { it.copy(profileSaveState = SaveState.ERROR, errorMessage = "Error al actualizar perfil: $errorBody") }
-                    }
+                    _uiState.update { it.copy(profileSaveState = SaveState.ERROR, errorMessage = "No se pudo actualizar el perfil.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(profileSaveState = SaveState.ERROR, errorMessage = "Error de conexión: ${e.message}") }
@@ -94,30 +95,20 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun changePassword(oldPass: String, newPass: String, confirmPass: String) {
+    // Método para cambiar la contraseña del usuario.
+    // Actualiza el estado de guardado y maneja errores y éxito.
+    fun changePassword(oldPassword: String, newPassword: String, confirmPassword: String) {
+        _uiState.update { it.copy(passwordSaveState = SaveState.LOADING, errorMessage = null) }
         viewModelScope.launch {
-            _uiState.update { it.copy(passwordSaveState = SaveState.LOADING, errorMessage = null) }
-            if (newPass != confirmPass) {
-                _uiState.update { it.copy(passwordSaveState = SaveState.ERROR, errorMessage = "Las nuevas contraseñas no coinciden.") }
-                return@launch
-            }
             try {
-                val request = ChangePasswordRequest(oldPass, newPass, confirmPass)
+                val request = ChangePasswordRequest(oldPassword, newPassword, confirmPassword)
                 val response = userRepository.changePassword(request)
                 if (response.isSuccessful) {
                     _uiState.update { it.copy(passwordSaveState = SaveState.SUCCESS) }
-                    // Después de cambiar la contraseña, SIEMPRE forzar reautenticación por seguridad
-                    _uiState.update { it.copy(requiresReauthentication = true, errorMessage = "Contraseña cambiada. Por favor, inicia sesión de nuevo.") }
-                    sessionManager.clearAuthToken() // Limpiar el token antiguo
+                } else if (response.code() == 401) {
+                    _uiState.update { it.copy(passwordSaveState = SaveState.ERROR, requiresReauthentication = true, errorMessage = "Sesión expirada. Inicia sesión nuevamente.") }
                 } else {
-                    val errorBody = response.errorBody()?.string() ?: "Error desconocido"
-                    // Si el error es por token inválido o credenciales incorrectas, forzar reautenticación
-                    if (response.code() == 401 || response.code() == 403) {
-                        _uiState.update { it.copy(passwordSaveState = SaveState.ERROR, errorMessage = "Sesión expirada. Por favor, inicia sesión de nuevo.", requiresReauthentication = true) }
-                        sessionManager.clearAuthToken()
-                    } else {
-                        _uiState.update { it.copy(passwordSaveState = SaveState.ERROR, errorMessage = "Error al cambiar contraseña: $errorBody") }
-                    }
+                    _uiState.update { it.copy(passwordSaveState = SaveState.ERROR, errorMessage = "No se pudo cambiar la contraseña.") }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(passwordSaveState = SaveState.ERROR, errorMessage = "Error de conexión: ${e.message}") }
@@ -125,12 +116,30 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // Método para limpiar los estados de guardado y mensajes de error.
+    fun clearSaveStates() {
+        _uiState.update { it.copy(profileSaveState = SaveState.IDLE, passwordSaveState = SaveState.IDLE, errorMessage = null, requiresReauthentication = false) }
+    }
+
+    // FUNCIONES FALTANTES - Agregadas para solucionar errores en EditProfileScreen
+
+    // Función para actualizar datos del perfil (alias de updateProfile para compatibilidad)
+    fun updateProfileData(username: String, email: String) {
+        updateProfile(username, email)
+    }
+
+    // Función para resetear la bandera de reautenticación
+    fun resetReauthenticationFlag() {
+        _uiState.update { it.copy(requiresReauthentication = false) }
+    }
+
+    // Función para resetear solo los estados de guardado (alias de clearSaveStates)
     fun resetSaveStates() {
         _uiState.update { it.copy(profileSaveState = SaveState.IDLE, passwordSaveState = SaveState.IDLE, errorMessage = null) }
     }
 
-    // NUEVO: Función para resetear la bandera de reautenticación
-    fun resetReauthenticationFlag() {
-        _uiState.update { it.copy(requiresReauthentication = false) }
+    // Función para cargar el perfil de usuario (alias de fetchUserProfile)
+    fun loadUserProfile() {
+        fetchUserProfile()
     }
 }
