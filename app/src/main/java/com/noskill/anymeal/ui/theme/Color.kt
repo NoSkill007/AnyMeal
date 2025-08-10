@@ -1,6 +1,6 @@
 /**
  * Color.kt
- *
+ * 
  * Propósito: Define la paleta de colores utilizada en toda la aplicación AnyMeal.
  * Contiene definiciones para los colores de los temas claro y oscuro, incluyendo
  * colores primarios, de fondo, superficie, texto y otros elementos de la interfaz.

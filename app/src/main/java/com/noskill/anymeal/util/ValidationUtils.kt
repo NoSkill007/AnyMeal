@@ -1,6 +1,6 @@
 /**
  * ValidationUtils.kt
- *
+ * 
  * Propósito: Proporciona funciones de utilidad para validar diferentes tipos de datos
  * ingresados por el usuario, como direcciones de correo electrónico, contraseñas, etc.
  * Estas funciones son utilizadas en toda la aplicación para garantizar la integridad
