@@ -17,6 +17,8 @@ import com.noskill.anymeal.dto.AddItemRequest
 import com.noskill.anymeal.dto.EditItemRequest
 import com.noskill.anymeal.dto.GenerateListRequest
 import com.noskill.anymeal.ui.models.ShoppingItem
+import com.noskill.anymeal.util.PlanChangeNotifier // AGREGADO: Import del notificador
+import com.noskill.anymeal.util.GlobalSyncService // AGREGADO: Import del servicio global
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -26,7 +28,8 @@ data class ShoppingListUiState(
     val isLoading: Boolean = true,
     val shoppingList: Map<String, List<ShoppingItem>> = emptyMap(),
     val error: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val isAutoSyncing: Boolean = false // Nuevo: indica si está sincronizando automáticamente
 )
 
 // ShoppingListViewModel extiende AndroidViewModel y gestiona el estado de la lista de compras.
@@ -43,6 +46,108 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
 
     // Desplazamiento de semana actual para generar la lista.
     private var currentWeekOffset = 0
+
+    /**
+     * NUEVA FUNCIONALIDAD: Regenera automáticamente la lista basada en el plan actual
+     * Se llama cuando hay cambios en el plan para mantener sincronización
+     */
+    fun autoRegenerateFromPlan(weekOffset: Int = currentWeekOffset) {
+        Log.d("ShoppingListVM", "🔄 AUTO_REGENERATE: Iniciando regeneración automática para weekOffset=$weekOffset")
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAutoSyncing = true, error = null) }
+            try {
+                val (startDate, endDate) = getWeekDateStrings(weekOffset)
+                Log.d("ShoppingListVM", "🔄 AUTO_REGENERATE: Generando lista para rango $startDate - $endDate")
+
+                val response = repository.generateAndGetListForWeek(GenerateListRequest(startDate, endDate))
+                if (response.isSuccessful && response.body() != null) {
+                    val domainModel = response.body()!!.itemsByCategory.mapValues { entry ->
+                        entry.value.map { dto ->
+                            val quantityStr = listOfNotNull(dto.amount?.toString(), dto.unit).joinToString(" ").trim()
+                            ShoppingItem(dto.id, dto.name, quantityStr, dto.category ?: "Otros", dto.isChecked)
+                        }
+                    }
+                    _uiState.update {
+                        it.copy(
+                            isAutoSyncing = false,
+                            isLoading = false,
+                            shoppingList = domainModel,
+                            successMessage = "Lista actualizada automáticamente"
+                        )
+                    }
+                    Log.d("ShoppingListVM", "🔄 AUTO_REGENERATE: ✅ Lista regenerada exitosamente")
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isAutoSyncing = false,
+                            isLoading = false,
+                            error = "Error al sincronizar: ${response.code()}"
+                        )
+                    }
+                    Log.e("ShoppingListVM", "🔄 AUTO_REGENERATE: ❌ Error HTTP ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isAutoSyncing = false,
+                        isLoading = false,
+                        error = "Error de sincronización: ${e.message}"
+                    )
+                }
+                Log.e("ShoppingListVM", "🔄 AUTO_REGENERATE: ❌ Excepción", e)
+            }
+        }
+    }
+
+    /**
+     * NUEVA FUNCIONALIDAD: Actualización inteligente que preserva cambios manuales
+     * Se usa para la semana actual donde el usuario puede haber hecho modificaciones
+     */
+    fun smartUpdate() {
+        Log.d("ShoppingListVM", "🧠 SMART_UPDATE: Iniciando actualización inteligente")
+        viewModelScope.launch {
+            _uiState.update { it.copy(isAutoSyncing = true, error = null) }
+            try {
+                // Para la semana actual, primero obtenemos la lista actual que preserva cambios manuales
+                val response = repository.getCurrentShoppingList()
+                if (response.isSuccessful && response.body() != null) {
+                    val domainModel = response.body()!!.itemsByCategory.mapValues { entry ->
+                        entry.value.map { dto ->
+                            val quantityStr = listOfNotNull(dto.amount?.toString(), dto.unit).joinToString(" ").trim()
+                            ShoppingItem(dto.id, dto.name, quantityStr, dto.category ?: "Otros", dto.isChecked)
+                        }
+                    }
+                    _uiState.update {
+                        it.copy(
+                            isAutoSyncing = false,
+                            isLoading = false,
+                            shoppingList = domainModel,
+                            successMessage = "Lista actualizada preservando cambios"
+                        )
+                    }
+                    Log.d("ShoppingListVM", "🧠 SMART_UPDATE: ✅ Actualización inteligente completada")
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isAutoSyncing = false,
+                            isLoading = false,
+                            error = "Error en actualización inteligente: ${response.code()}"
+                        )
+                    }
+                    Log.e("ShoppingListVM", "🧠 SMART_UPDATE: ❌ Error HTTP ${response.code()}")
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isAutoSyncing = false,
+                        isLoading = false,
+                        error = "Error en actualización inteligente: ${e.message}"
+                    )
+                }
+                Log.e("ShoppingListVM", "🧠 SMART_UPDATE: ❌ Excepción", e)
+            }
+        }
+    }
 
     // Genera la lista de compras para la semana especificada por el desplazamiento.
     fun generateListForWeek(weekOffset: Int) {
@@ -208,12 +313,28 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
                 val amount = parts.firstOrNull()?.toDoubleOrNull()
                 val unit = if (parts.size > 1) parts.drop(1).joinToString(" ") else null
 
-                val request = EditItemRequest(name, amount, unit)
+                // CORREGIDO: Usar nombres de parámetros explícitos para evitar confusión
+                val request = EditItemRequest(
+                    customName = name,
+                    amount = amount,
+                    unit = unit
+                )
                 Log.d("ShoppingListVM", "🔵 EDIT_ITEM: Request preparado: $request")
 
-                // Editar directamente en el backend
+                // Editar directamente en el backend con timeout
                 Log.d("ShoppingListVM", "🔵 EDIT_ITEM: Enviando edición al backend")
-                val editResponse = repository.editItem(itemId, request)
+
+                // CORREGIDO: Agregar timeout y mejor manejo
+                val editResponse = kotlinx.coroutines.withTimeoutOrNull(10000) { // 10 segundos timeout
+                    repository.editItem(itemId, request)
+                }
+
+                if (editResponse == null) {
+                    Log.e("ShoppingListVM", "🔵 EDIT_ITEM: ❌ TIMEOUT - El servidor no respondió en 10 segundos")
+                    _uiState.update { it.copy(error = "Timeout: El servidor no responde. Intenta más tarde.") }
+                    return@launch
+                }
+
                 Log.d("ShoppingListVM", "🔵 EDIT_ITEM: Response edit: isSuccessful=${editResponse.isSuccessful}, code=${editResponse.code()}")
 
                 if (editResponse.isSuccessful) {
@@ -273,14 +394,35 @@ class ShoppingListViewModel(application: Application) : AndroidViewModel(applica
 
     // Función privada que obtiene las fechas de inicio y fin de la semana para el desplazamiento dado.
     private fun getWeekDateStrings(weekOffset: Int): Pair<String, String> {
-        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val calendar = Calendar.getInstance().apply {
-            add(Calendar.WEEK_OF_YEAR, weekOffset)
-            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-        }
-        val startDate = formatter.format(calendar.time)
-        calendar.add(Calendar.DAY_OF_YEAR, 6)
-        val endDate = formatter.format(calendar.time)
+        // CORREGIDO: Usar LocalDate para consistencia con PlanScreen
+        val today = java.time.LocalDate.now()
+        val startOfCurrentWeek = today.with(java.time.DayOfWeek.MONDAY)
+        val targetWeekStart = startOfCurrentWeek.plusWeeks(weekOffset.toLong())
+        val targetWeekEnd = targetWeekStart.plusDays(6) // Domingo
+
+        val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val startDate = targetWeekStart.format(formatter)
+        val endDate = targetWeekEnd.format(formatter)
+
+        Log.d("ShoppingListVM", "🗓️ FECHAS_CALCULADAS: weekOffset=$weekOffset, start=$startDate, end=$endDate")
         return Pair(startDate, endDate)
+    }
+
+    /**
+     * NUEVA FUNCIONALIDAD: Inicia la escucha de notificaciones de plan
+     * Se ejecuta al inicializar el ViewModel para mantener sincronización constante
+     */
+    init {
+        // Escuchar actualizaciones globales de la shopping list
+        viewModelScope.launch {
+            GlobalSyncService.ShoppingListUpdateNotifier.listUpdated.collect { timestamp ->
+                Log.d("ShoppingListVM", "🔔 LISTA_ACTUALIZADA_GLOBALMENTE recibida - timestamp: $timestamp")
+
+                // Recargar la lista actual cuando fue actualizada externamente
+                getCurrentList()
+            }
+        }
+
+        Log.d("ShoppingListVM", "🎯 ShoppingListViewModel INICIALIZADO - Escuchando actualizaciones globales")
     }
 }

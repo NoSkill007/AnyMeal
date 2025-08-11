@@ -34,10 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.noskill.anymeal.data.navItems
 import com.noskill.anymeal.ui.components.FloatingBottomNavBar
 import com.noskill.anymeal.ui.components.WeekNavigator
 import com.noskill.anymeal.ui.models.ShoppingItem
+import com.noskill.anymeal.util.PlanChangeNotifier
 import com.noskill.anymeal.viewmodel.ShoppingListUiState
 import com.noskill.anymeal.viewmodel.ShoppingListViewModel
 import java.time.LocalDate
@@ -59,12 +61,20 @@ fun ShoppingListScreen(
     navController: NavController,
     viewModel: ShoppingListViewModel = viewModel()
 ) {
+    Log.d("ShoppingListScreen", "🏁 COMPOSABLE_INICIADO - ShoppingListScreen se está componiendo")
+
     val uiState by viewModel.uiState.collectAsState()
     var weekOffset by remember { mutableStateOf(0) }
     var showAddItemDialog by remember { mutableStateOf(false) }
     var showEditItemDialog by remember { mutableStateOf(false) }
     var itemToEdit by remember { mutableStateOf<ShoppingItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+
+    // Estado para detectar navegación
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    Log.d("ShoppingListScreen", "🏁 ESTADOS_INICIALIZADOS - About to start LaunchedEffects")
 
     // Mostrar errores con Snackbar
     val snackbarHostState = remember { SnackbarHostState() }
@@ -97,10 +107,46 @@ fun ShoppingListScreen(
             // Al cargar por primera vez o volver a la pantalla, usar getCurrentList
             Log.d("ShoppingListVM", "🚀 LLAMANDO getCurrentList() - primera carga")
             viewModel.getCurrentList()
+
+            // 🔥 NUEVO: Si la lista está vacía, generar automáticamente desde el plan
+            // Esperamos un momento para que se complete getCurrentList()
+            kotlinx.coroutines.delay(500)
+            if (uiState.shoppingList.isEmpty() && !uiState.isLoading) {
+                Log.d("ShoppingListVM", "📋 Lista vacía detectada - Generando desde el plan actual")
+                viewModel.generateListForWeek(0)
+            }
         } else {
             // Solo regenerar desde el plan cuando realmente cambiemos de semana
             Log.d("ShoppingListVM", "🚀 LLAMANDO generateListForWeek($weekOffset)")
             viewModel.generateListForWeek(weekOffset)
+        }
+    }
+
+    // 🔥 NUEVA FUNCIONALIDAD: Sincronización automática mejorada con cambios del plan
+    LaunchedEffect(Unit) {
+        Log.d("ShoppingListScreen", "🔔 INICIANDO sistema de sincronización automática...")
+        PlanChangeNotifier.planChanged.collect { event ->
+            Log.d("ShoppingListScreen", "🔔 CAMBIO_DETECTADO: ${event.action} en fecha: ${event.modifiedDate}")
+
+            when {
+                weekOffset == 0 -> {
+                    // Semana actual: usar actualización inteligente que preserva cambios manuales
+                    Log.d("ShoppingListScreen", "🧠 Ejecutando actualización inteligente (semana actual)")
+                    viewModel.smartUpdate()
+                }
+                else -> {
+                    // Otras semanas: regenerar completamente desde el plan
+                    Log.d("ShoppingListScreen", "🔄 Regenerando lista para semana offset: $weekOffset")
+                    viewModel.autoRegenerateFromPlan(weekOffset)
+                }
+            }
+        }
+    }
+
+    // Mostrar indicador de sincronización automática
+    if (uiState.isAutoSyncing) {
+        LaunchedEffect(Unit) {
+            Log.d("ShoppingListScreen", "⏳ Mostrando indicador de sincronización automática")
         }
     }
 
@@ -266,6 +312,18 @@ fun ShoppingListScreen(
                 itemToEdit = null
             }
         )
+    }
+
+    // CORREGIDO: Detectar cuando regresas a la pantalla y recargar
+    LaunchedEffect(currentDestination?.route) {
+        if (currentDestination?.route == "shopping_list") {
+            Log.d("ShoppingListVM", "🔄 REGRESANDO_A_SHOPPING_LIST - Recargando datos")
+            if (weekOffset == 0) {
+                viewModel.getCurrentList()
+            } else {
+                viewModel.generateListForWeek(weekOffset)
+            }
+        }
     }
 }
 

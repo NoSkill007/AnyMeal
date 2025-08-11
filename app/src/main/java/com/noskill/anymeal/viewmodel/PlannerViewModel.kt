@@ -104,8 +104,9 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
                 val response = planRepository.addRecipeToPlan(request)
                 if (response.isSuccessful) {
                     fetchWeeklyPlan(_currentStartDate.value) // Refresca plan con fecha actual
-                    // Notificar que el plan ha cambiado para actualizar la lista de compras
-                    PlanChangeNotifier.notifyPlanChanged()
+                    // CORREGIDO: Usar la nueva función de notificación específica
+                    PlanChangeNotifier.notifyRecipeAdded(localDate)
+                    println("✅ Receta agregada al plan y notificación enviada para fecha: $localDate")
                 } else {
                     println("Error al añadir receta al plan: ${response.code()} - ${response.errorBody()?.string()}")
                 }
@@ -126,11 +127,13 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
                 val response = planRepository.deletePlanEntry(entryId)
                 if (response.isSuccessful) {
                     fetchWeeklyPlan(_currentStartDate.value) // Refresca plan con fecha actual
-                    // CORREGIDO: Notificar que el plan ha cambiado con la fecha específica de la receta eliminada
-                    PlanChangeNotifier.notifyPlanChanged(recipeDate)
+                    // CORREGIDO: Usar la nueva función de notificación específica para eliminación
+                    PlanChangeNotifier.notifyRecipeRemoved(recipeDate)
+                    println("✅ Receta eliminada del plan y notificación enviada para fecha: $recipeDate")
                 }
             } catch (e: Exception) {
                 // Manejo opcional de errores
+                println("Error al eliminar receta del plan: ${e.message}")
             }
         }
     }
