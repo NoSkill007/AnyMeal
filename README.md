@@ -57,10 +57,6 @@ app/src/main/java/com/noskill/anymeal/
 ![Home Screen](screenshots/home_screen.png)
 *Browse featured recipes and navigate to different sections*
 
-### Recipe Detail
-![Recipe Detail](screenshots/recipe_detail.png)
-*Detailed view with ingredients, instructions, and cooking information*
-
 ### Meal Planning
 ![Meal Planning](screenshots/meal_plan.png)
 *Plan your meals for the week with calendar view*
