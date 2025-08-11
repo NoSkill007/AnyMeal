@@ -26,6 +26,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.noskill.anymeal.navigation.Screen // Asegúrate de que esto apunta a navigation.AppNavigation.kt
 import com.noskill.anymeal.ui.components.SmallRecipeCard
 import com.noskill.anymeal.util.Result
+import com.noskill.anymeal.util.PlanChangeNotifier
 import com.noskill.anymeal.viewmodel.FavoritesViewModel
 import com.noskill.anymeal.viewmodel.PlannerViewModel // Importar PlannerViewModel
 import com.noskill.anymeal.viewmodel.RecipeViewModel
@@ -141,7 +142,10 @@ fun RecipeSearchScreen(
                                             currentStartDate // Pasando el currentStartDate para el refresh del plan semanal
                                         )
 
-                                        // 2. Navegar de vuelta a PlanScreen de forma que force la recomposición
+                                        // 2. Notificar que el plan ha cambiado para actualizar la lista de compras
+                                        PlanChangeNotifier.notifyPlanChanged()
+
+                                        // 3. Navegar de vuelta a PlanScreen de forma que force la recomposición
                                         navController.navigate(Screen.Plan.route) {
                                             // Limpia la pila hasta la pantalla de inicio (asumiendo que Plan es la raíz o casi la raíz)
                                             // Esto fuerza a PlanScreen a ser recreada y obtener el estado más reciente.

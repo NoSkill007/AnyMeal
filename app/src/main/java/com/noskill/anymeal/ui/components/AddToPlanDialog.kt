@@ -37,6 +37,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.noskill.anymeal.navigation.Screen
+import com.noskill.anymeal.util.PlanChangeNotifier
 import com.noskill.anymeal.viewmodel.PlannerViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -245,22 +246,16 @@ fun AddToPlanDialog(
                                     selectedDate,
                                     currentStartDateForRefresh // Usar para refrescar correctamente
                                 )
+
+                                // CRÍTICO: Notificar que el plan ha cambiado CON LA FECHA ESPECÍFICA
+                                val selectedLocalDate = selectedDate.toInstant()
+                                    .atZone(java.time.ZoneId.systemDefault())
+                                    .toLocalDate()
+                                PlanChangeNotifier.notifyPlanChanged(selectedLocalDate)
+
                                 onDismiss()
 
-                                // Navegación contextual según el origen
-                                if (source == "plan_from_search" || source == "home") {
-                                    // Navega directamente a la pantalla del plan
-                                    navController.navigate(Screen.Plan.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            inclusive = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = false // Fuerza la recomposición
-                                    }
-                                } else {
-                                    // Vuelve a la pantalla anterior
-                                    navController.popBackStack()
-                                }
+                                // REMOVIDO: No navegar automáticamente, dejar que el usuario decida dónde ir
                             }
                         }) { Text("Confirmar") }
                     }

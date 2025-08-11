@@ -19,7 +19,7 @@ object NetworkModule { // Define un objeto singleton para proveer dependencias d
      * Esta debe ser la dirección IPv4 de tu computadora en la red local (Wi-Fi).
      * El puerto :8080 es donde se ejecuta el servidor de Spring Boot.
      */
-    private const val BASE_URL = "http://192.168.68.52:8080/" // URL base del backend donde se reciben las peticiones.
+    private const val BASE_URL = "http://192.168.68.51:8080/" // URL base del backend donde se reciben las peticiones.
 
     /**
      * Crea y configura la instancia de ApiService que se usará para hacer las llamadas de red.

@@ -16,6 +16,7 @@ import com.noskill.anymeal.ui.models.DailyPlan // Modelo UI para el plan diario
 import com.noskill.anymeal.ui.models.PlanEntry // Modelo UI para una entrada de plan
 import com.noskill.anymeal.ui.models.RecipePreviewUi // Modelo UI para previsualización de receta
 import com.noskill.anymeal.util.Result // Wrapper para estados de resultado (Loading, Success, Error)
+import com.noskill.anymeal.util.PlanChangeNotifier // Notificador de cambios en el plan
 import kotlinx.coroutines.flow.MutableStateFlow // Flow mutable para estado observable
 import kotlinx.coroutines.flow.StateFlow // Flow inmutable para exposición de estado
 import kotlinx.coroutines.flow.asStateFlow // Conversión a StateFlow
@@ -86,7 +87,7 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * Añade una receta al plan en una fecha y momento específico.
-     * Refresca el plan semanal tras la operación.
+     * Refresca el plan semanal tras la operación y notifica el cambio.
      */
     fun addRecipeToPlan(recipeId: Int, mealTime: String, date: Date, currentStartDate: LocalDate) {
         viewModelScope.launch {
@@ -103,6 +104,8 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
                 val response = planRepository.addRecipeToPlan(request)
                 if (response.isSuccessful) {
                     fetchWeeklyPlan(_currentStartDate.value) // Refresca plan con fecha actual
+                    // Notificar que el plan ha cambiado para actualizar la lista de compras
+                    PlanChangeNotifier.notifyPlanChanged()
                 } else {
                     println("Error al añadir receta al plan: ${response.code()} - ${response.errorBody()?.string()}")
                 }
@@ -114,14 +117,17 @@ class PlannerViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * Elimina una entrada del plan por su ID.
-     * Refresca el plan semanal tras la operación.
+     * Refresca el plan semanal tras la operación y notifica el cambio.
+     * CORREGIDO: Ahora recibe la fecha específica de la receta eliminada.
      */
-    fun deletePlanEntry(entryId: Long, currentStartDate: LocalDate) {
+    fun deletePlanEntry(entryId: Long, currentStartDate: LocalDate, recipeDate: LocalDate) {
         viewModelScope.launch {
             try {
                 val response = planRepository.deletePlanEntry(entryId)
                 if (response.isSuccessful) {
                     fetchWeeklyPlan(_currentStartDate.value) // Refresca plan con fecha actual
+                    // CORREGIDO: Notificar que el plan ha cambiado con la fecha específica de la receta eliminada
+                    PlanChangeNotifier.notifyPlanChanged(recipeDate)
                 }
             } catch (e: Exception) {
                 // Manejo opcional de errores

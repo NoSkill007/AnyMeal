@@ -1,6 +1,6 @@
 /**
  * ShoppingListScreen.kt
- * 
+ *
  * Propósito: Define la pantalla de lista de compras de la aplicación AnyMeal.
  * Permite al usuario gestionar elementos de su lista de compras, incluyendo añadir,
  * editar, eliminar y marcar como completados. Ofrece funcionalidades de búsqueda,
@@ -40,7 +40,8 @@ import com.noskill.anymeal.ui.components.WeekNavigator
 import com.noskill.anymeal.ui.models.ShoppingItem
 import com.noskill.anymeal.viewmodel.ShoppingListUiState
 import com.noskill.anymeal.viewmodel.ShoppingListViewModel
-import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
@@ -517,20 +518,19 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 }
 
 /**
- * Función de utilidad que calcula el rango de fechas de la semana a mostrar,
+ * Calcula el rango de fechas de una semana específica usando LocalDate para consistencia
  * basado en el desplazamiento desde la semana actual.
  *
  * @param weekOffset Número de semanas de desplazamiento desde la semana actual
  * @return Cadena de texto formateada con el rango de fechas (ej. "1 Ago - 7 Ago")
  */
 private fun getWeekDateRange(weekOffset: Int): String {
-    val weekFormat = SimpleDateFormat("d MMM", Locale("es", "ES"))
-    val calendar = Calendar.getInstance().apply {
-        add(Calendar.WEEK_OF_YEAR, weekOffset)
-        set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-    }
-    val startOfWeek = calendar.time
-    calendar.add(Calendar.DAY_OF_YEAR, 6)
-    val endOfWeek = calendar.time
-    return "${weekFormat.format(startOfWeek)} - ${weekFormat.format(endOfWeek)}"
+    // CORREGIDO: Usar LocalDate para consistencia con PlanScreen
+    val today = LocalDate.now()
+    val startOfCurrentWeek = today.with(java.time.DayOfWeek.MONDAY)
+    val targetWeekStart = startOfCurrentWeek.plusWeeks(weekOffset.toLong())
+    val targetWeekEnd = targetWeekStart.plusDays(6) // Domingo
+
+    val weekFormat = java.time.format.DateTimeFormatter.ofPattern("d MMM", Locale("es", "ES"))
+    return "${targetWeekStart.format(weekFormat)} - ${targetWeekEnd.format(weekFormat)}"
 }

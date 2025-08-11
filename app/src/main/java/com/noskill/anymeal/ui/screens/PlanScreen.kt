@@ -30,17 +30,16 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.noskill.anymeal.data.navItems
-import com.noskill.anymeal.navigation.Screen // Asegúrate de que esto apunta a navigation.AppNavigation.kt
+import com.noskill.anymeal.navigation.Screen
 import com.noskill.anymeal.ui.components.*
 import com.noskill.anymeal.ui.models.DailyPlan
 import com.noskill.anymeal.ui.models.NutritionInfo
 import com.noskill.anymeal.util.Result
+import com.noskill.anymeal.util.PlanChangeNotifier
 import com.noskill.anymeal.viewmodel.FavoritesViewModel
 import com.noskill.anymeal.viewmodel.PlannerViewModel
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
@@ -81,16 +80,33 @@ fun PlanScreen(
         currentDestination?.hierarchy?.any { it.route == item.route } == true
     }.coerceAtLeast(0)
 
+    // Variable para controlar si ya se hizo el scroll inicial
+    var hasInitialScrolled by remember { mutableStateOf(false) }
+
+    // CORREGIDO: Efecto principal que maneja el scroll automático al entrar/regresar a la pantalla
+    LaunchedEffect(currentDestination?.route) {
+        if (currentDestination?.route == "plan") {
+            Log.d("PlanScreen", "🔄 Entrando/regresando a PlanScreen")
+
+            // Resetear al día actual y semana actual
+            weekOffset = 0
+            selectedDayIndex = todayIndex
+
+            // Auto-scroll al día actual con un pequeño delay para asegurar que el LazyRow esté listo
+            kotlinx.coroutines.delay(100)
+            daySelectorState.animateScrollToItem(todayIndex)
+            hasInitialScrolled = true
+
+            Log.d("PlanScreen", "✅ Auto-scroll completado - día: $todayIndex")
+        }
+    }
+
     // Cálculo de la fecha de inicio de la semana actual basado en el desplazamiento
     val currentStartDate = remember(weekOffset) {
-        val weekCalendar = Calendar.getInstance()
-        weekCalendar.add(Calendar.WEEK_OF_YEAR, weekOffset)
-        weekCalendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-        LocalDate.of(
-            weekCalendar.get(Calendar.YEAR),
-            weekCalendar.get(Calendar.MONTH) + 1,
-            weekCalendar.get(Calendar.DAY_OF_MONTH)
-        )
+        // CORREGIDO: Usar LocalDate directamente en lugar de Calendar para evitar desfases
+        val today = LocalDate.now()
+        val startOfCurrentWeek = today.with(java.time.DayOfWeek.MONDAY)
+        startOfCurrentWeek.plusWeeks(weekOffset.toLong())
     }
 
     // Efecto para cargar los datos del plan al cambiar de semana
@@ -99,41 +115,67 @@ fun PlanScreen(
         plannerViewModel.fetchWeeklyPlan(currentStartDate)
     }
 
-    // Efecto inicial para desplazarse al día actual en el selector horizontal
-    LaunchedEffect(Unit) {
-        daySelectorState.animateScrollToItem(todayIndex)
+    // Auto-scroll cuando el usuario selecciona manualmente un día diferente
+    LaunchedEffect(selectedDayIndex) {
+        // Solo hacer scroll si ya se completó el scroll inicial y el usuario cambió el día manualmente
+        if (hasInitialScrolled && selectedDayIndex != todayIndex) {
+            daySelectorState.animateScrollToItem(selectedDayIndex)
+            Log.d("PlanScreen", "📍 Scroll manual a día: $selectedDayIndex")
+        }
+    }
+
+    // NUEVO: Escuchar cambios en el plan y sincronizar automáticamente
+    LaunchedEffect(PlanChangeNotifier.planChanged) {
+        PlanChangeNotifier.planChanged.collect { event ->
+            if (event.modifiedDate != null) {
+                Log.d("PlanScreen", "🔔 CAMBIO_EN_EL_PLAN detectado - fecha: ${event.modifiedDate}")
+
+                // Calcular el weekOffset necesario para mostrar la semana que contiene la fecha
+                val newWeekOffset = com.noskill.anymeal.util.DateUtils.getWeekOffsetForDate(event.modifiedDate)
+
+                // Calcular el índice del día dentro de esa semana
+                val dayOfWeek = event.modifiedDate.dayOfWeek.value
+                val newDayIndex = if (dayOfWeek == 7) 6 else dayOfWeek - 1 // Convertir domingo (7) a índice 6
+
+                Log.d("PlanScreen", "🔄 SINCRONIZANDO: weekOffset=$newWeekOffset, dayIndex=$newDayIndex")
+
+                // Actualizar el estado para mostrar la semana y día correctos
+                weekOffset = newWeekOffset
+                selectedDayIndex = newDayIndex
+
+                // Auto-scroll inmediato al día sincronizado
+                daySelectorState.animateScrollToItem(newDayIndex)
+            }
+        }
     }
 
     // Cálculo de la fecha seleccionada como LocalDate
     val selectedDateAsLocalDate = remember(weekOffset, selectedDayIndex) {
-        val weekCalendar = Calendar.getInstance().apply {
-            add(Calendar.WEEK_OF_YEAR, weekOffset)
-            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-        }
-        weekCalendar.add(Calendar.DAY_OF_YEAR, selectedDayIndex)
-        weekCalendar.time.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        // CORREGIDO: Usar LocalDate consistentemente
+        val today = LocalDate.now()
+        val startOfCurrentWeek = today.with(java.time.DayOfWeek.MONDAY)
+        val targetWeekStart = startOfCurrentWeek.plusWeeks(weekOffset.toLong())
+        targetWeekStart.plusDays(selectedDayIndex.toLong())
     }
 
     // Cálculo de textos para mostrar el rango de fechas de la semana y la fecha seleccionada
     val (weekDateRange, selectedDateString) = remember(weekOffset, selectedDayIndex) {
-        val weekCalendar = Calendar.getInstance().apply {
-            add(Calendar.WEEK_OF_YEAR, weekOffset)
-            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-        }
-        val startOfWeekUtilDate = weekCalendar.time
-        weekCalendar.add(Calendar.DAY_OF_YEAR, 6)
-        val endOfWeekUtilDate = weekCalendar.time
-        val weekFormat = SimpleDateFormat("d MMM", Locale("es", "ES"))
-        val weekRangeStr = "${weekFormat.format(startOfWeekUtilDate)} - ${weekFormat.format(endOfWeekUtilDate)}"
+        // CORREGIDO: Usar LocalDate consistenteemente para evitar desfases
+        val today = LocalDate.now()
+        val startOfCurrentWeek = today.with(java.time.DayOfWeek.MONDAY)
+        val targetWeekStart = startOfCurrentWeek.plusWeeks(weekOffset.toLong())
+        val targetWeekEnd = targetWeekStart.plusDays(6) // Domingo
 
-        weekCalendar.time = startOfWeekUtilDate
-        weekCalendar.add(Calendar.DAY_OF_YEAR, selectedDayIndex)
-        val currentUtilDate = weekCalendar.time
+        val weekFormat = java.time.format.DateTimeFormatter.ofPattern("d MMM", Locale("es", "ES"))
+        val weekRangeStr = "${targetWeekStart.format(weekFormat)} - ${targetWeekEnd.format(weekFormat)}"
 
-        val dayFormat = SimpleDateFormat("EEEE, d 'de' MMMM", Locale("es", "ES"))
-        val selectedDateStr = dayFormat.format(currentUtilDate).replaceFirstChar {
+        // Calcular la fecha seleccionada
+        val selectedDate = targetWeekStart.plusDays(selectedDayIndex.toLong())
+        val dayFormat = java.time.format.DateTimeFormatter.ofPattern("EEEE, d 'de' MMMM", Locale("es", "ES"))
+        val selectedDateStr = selectedDate.format(dayFormat).replaceFirstChar {
             if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
         }
+
         Pair(weekRangeStr, selectedDateStr)
     }
 
@@ -217,9 +259,8 @@ fun PlanScreen(
                                     selectedDayIndex = selectedDayIndex,
                                     onDaySelected = { index ->
                                         selectedDayIndex = index
-                                        coroutineScope.launch {
-                                            daySelectorState.animateScrollToItem(index)
-                                        }
+                                        // Eliminado el scroll manual redundante - se maneja automáticamente
+                                        // por el LaunchedEffect(selectedDayIndex)
                                     },
                                     lazyListState = daySelectorState
                                 )
@@ -271,7 +312,8 @@ fun PlanScreen(
                                 },
                                 // Eliminación de una entrada del plan
                                 onDeleteEntry = { entryId ->
-                                    plannerViewModel.deletePlanEntry(entryId, currentStartDate)
+                                    // CORREGIDO: Pasar la fecha específica de la receta eliminada
+                                    plannerViewModel.deletePlanEntry(entryId, currentStartDate, selectedDateAsLocalDate)
                                 },
                                 favoritesViewModel = favoritesViewModel
                             )
